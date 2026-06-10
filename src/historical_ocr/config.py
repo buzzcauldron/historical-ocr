@@ -78,8 +78,64 @@ class Settings(BaseSettings):
         validation_alias="HISTORICAL_OCR_BIB_PREPROCESS",
     )
     pdf_density_ocr: bool = Field(
-        default=True,
+        default=False,
         validation_alias="HISTORICAL_OCR_PDF_DENSITY_OCR",
+    )
+    fast_mode: bool = Field(
+        default=False,
+        validation_alias="HISTORICAL_OCR_FAST_MODE",
+    )
+    save_layout_artifacts: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_SAVE_LAYOUT_ARTIFACTS",
+    )
+    export_internal: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_EXPORT_INTERNAL",
+    )
+    tei_facsimile: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_TEI_FACSIMILE",
+    )
+    parallel_pages: int = Field(
+        default=1,
+        ge=1,
+        le=16,
+        validation_alias="HISTORICAL_OCR_PARALLEL_PAGES",
+    )
+    jpeg_optimize: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_JPEG_OPTIMIZE",
+    )
+    symbol_filter: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_SYMBOL_FILTER",
+    )
+    ocr_min_confidence: float = Field(
+        default=60.0,
+        ge=0.0,
+        le=100.0,
+        validation_alias="HISTORICAL_OCR_OCR_MIN_CONFIDENCE",
+    )
+    tesseract_char_blacklist: str | None = Field(
+        default="|_",
+        validation_alias="HISTORICAL_OCR_TESSERACT_CHAR_BLACKLIST",
+    )
+    tesseract_char_whitelist: str | None = Field(
+        default=None,
+        validation_alias="HISTORICAL_OCR_TESSERACT_CHAR_WHITELIST",
+    )
+    symbol_strip_trailing: str = Field(
+        default="|_:",
+        validation_alias="HISTORICAL_OCR_SYMBOL_STRIP_TRAILING",
+    )
+    symbol_glyph_filter: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_SYMBOL_GLYPH_FILTER",
+    )
+    symbol_glyph_heatmap: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_SYMBOL_GLYPH_HEATMAP",
     )
 
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")

@@ -62,7 +62,27 @@ class LayoutOcrResult:
         )
 
 
-def _group_tesseract_lines(data: dict) -> list[OcrLine]:
+def _group_tesseract_lines(
+    data: dict,
+    *,
+    filter_opts=None,
+    page_gray=None,
+    glyph_decisions_out: list | None = None,
+) -> list[OcrLine]:
+    from historical_ocr.lib.glyph_classify import (
+        classify_token,
+        line_median_heights,
+        page_median_letter_height,
+    )
+    from historical_ocr.lib.symbol_filter import (
+        SymbolFilterOptions,
+        needs_glyph_review,
+        should_drop_token,
+    )
+
+    opts = filter_opts or SymbolFilterOptions(enabled=False)
+    line_heights = line_median_heights(data) if opts.glyph_filter else {}
+    page_median_h = page_median_letter_height(line_heights)
     buckets: dict[tuple[int, int, int], list[tuple[str, int, int, int, int, float]]] = {}
     n = len(data["text"])
     for i in range(n):
@@ -75,18 +95,42 @@ def _group_tesseract_lines(data: dict) -> list[OcrLine]:
             conf = -1.0
         if conf < 0:
             continue
+
+        left = int(data["left"][i])
+        top = int(data["top"][i])
+        width = int(data["width"][i])
+        height = int(data["height"][i])
         key = (
             int(data["block_num"][i]),
             int(data["par_num"][i]),
             int(data["line_num"][i]),
         )
+        line_h = line_heights.get(key) or page_median_h or float(height)
+
+        glyph_decision = None
+        if needs_glyph_review(text, conf, opts):
+            glyph_decision = classify_token(
+                text=text,
+                conf=conf,
+                left=left,
+                top=top,
+                width=width,
+                height=height,
+                line_median_h=line_h,
+                page_gray=page_gray,
+            )
+            if glyph_decisions_out is not None:
+                glyph_decisions_out.append((left, top, width, height, glyph_decision))
+
+        if should_drop_token(text, conf, opts, glyph_decision=glyph_decision):
+            continue
         buckets.setdefault(key, []).append(
             (
                 text,
-                int(data["left"][i]),
-                int(data["top"][i]),
-                int(data["width"][i]),
-                int(data["height"][i]),
+                left,
+                top,
+                width,
+                height,
                 conf,
             ),
         )
@@ -114,12 +158,96 @@ def _group_tesseract_lines(data: dict) -> list[OcrLine]:
     return lines
 
 
+def apply_symbol_filter_to_result(result: LayoutOcrResult, filter_opts) -> LayoutOcrResult:
+    from historical_ocr.lib.symbol_filter import SymbolFilterOptions, sanitize_line, sanitize_ocr_text
+
+    opts = filter_opts or SymbolFilterOptions(enabled=False)
+    if not opts.enabled:
+        return result
+
+    if result.lines:
+        updated: list[OcrLine] = []
+        for line in result.lines:
+            clean = sanitize_line(line.text, opts)
+            if not clean:
+                continue
+            updated.append(
+                OcrLine(
+                    line_num=line.line_num,
+                    text=clean,
+                    left=line.left,
+                    top=line.top,
+                    width=line.width,
+                    height=line.height,
+                    conf=line.conf,
+                ),
+            )
+        full_text = "\n".join(l.text for l in updated)
+        return LayoutOcrResult(
+            lines=updated,
+            page_width=result.page_width,
+            page_height=result.page_height,
+            full_text=full_text,
+        )
+
+    return LayoutOcrResult(
+        lines=result.lines,
+        page_width=result.page_width,
+        page_height=result.page_height,
+        full_text=sanitize_ocr_text(result.full_text, opts),
+    )
+
+
+def _tesseract_config(psm: int, filter_opts) -> str:
+    from historical_ocr.backends import tesseract as tess_backend
+    from historical_ocr.lib.symbol_filter import SymbolFilterOptions
+
+    opts = filter_opts or SymbolFilterOptions(enabled=False)
+    blacklist = opts.char_blacklist if opts.enabled else None
+    whitelist = opts.char_whitelist if opts.enabled else None
+    return tess_backend.build_config(
+        psm=psm,
+        char_blacklist=blacklist,
+        char_whitelist=whitelist,
+    )
+
+
+def ocr_image_text_only(
+    image: Path,
+    *,
+    lang: str = "lat+frk+eng",
+    psm: int = 6,
+    settings=None,
+    filter_opts=None,
+) -> LayoutOcrResult:
+    """Fast Tesseract pass: ``image_to_string`` only (no per-word layout scan)."""
+    from historical_ocr.backends import tesseract as tess_backend
+    import pytesseract
+
+    if settings is not None:
+        tess_backend.configure_from_settings(settings)
+    tess_backend.ensure_ready(lang)
+
+    config = _tesseract_config(psm, filter_opts)
+    with Image.open(image) as im:
+        page_width, page_height = im.size
+        text = pytesseract.image_to_string(im, lang=lang, config=config)
+    result = LayoutOcrResult(
+        lines=[],
+        page_width=page_width,
+        page_height=page_height,
+        full_text=text.strip(),
+    )
+    return apply_symbol_filter_to_result(result, filter_opts)
+
+
 def ocr_image_with_layout(
     image: Path,
     *,
     lang: str = "lat+frk+eng",
     psm: int = 6,
     settings=None,
+    filter_opts=None,
 ) -> LayoutOcrResult:
     from historical_ocr.backends import tesseract as tess_backend
     from pytesseract import Output
@@ -130,9 +258,11 @@ def ocr_image_with_layout(
 
     import pytesseract
 
-    config = f"--psm {psm}"
+    config = _tesseract_config(psm, filter_opts)
+    glyph_decisions: list = []
     with Image.open(image) as im:
         page_width, page_height = im.size
+        page_gray = im.convert("L") if filter_opts and filter_opts.glyph_filter else None
         data = pytesseract.image_to_data(
             im,
             lang=lang,
@@ -140,14 +270,35 @@ def ocr_image_with_layout(
             output_type=Output.DICT,
         )
 
-    lines = _group_tesseract_lines(data)
+    gray_arr = None
+    if page_gray is not None:
+        try:
+            import numpy as np
+
+            gray_arr = np.asarray(page_gray, dtype=np.uint8)
+        except ImportError:
+            gray_arr = None
+
+    lines = _group_tesseract_lines(
+        data,
+        filter_opts=filter_opts,
+        page_gray=gray_arr,
+        glyph_decisions_out=glyph_decisions if filter_opts and filter_opts.glyph_filter else None,
+    )
+
+    if filter_opts and filter_opts.glyph_filter and glyph_decisions:
+        from historical_ocr.lib.glyph_heatmap import persist_glyph_decisions
+
+        job_root = image.parent.parent if image.parent.name == "pages" else image.parent
+        persist_glyph_decisions(job_root, image.stem, glyph_decisions)
     full_text = "\n".join(line.text for line in lines if line.text.strip())
-    return LayoutOcrResult(
+    result = LayoutOcrResult(
         lines=lines,
         page_width=page_width,
         page_height=page_height,
         full_text=full_text,
     )
+    return apply_symbol_filter_to_result(result, filter_opts)
 
 
 def write_layout_json(result: LayoutOcrResult, dst: Path) -> None:

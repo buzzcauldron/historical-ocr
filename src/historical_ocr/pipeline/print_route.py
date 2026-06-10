@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Callable
 
@@ -161,10 +162,12 @@ def ocr_single_page(
             psm=psm,
             preprocess=preprocess,
             settings=settings,
+            print_spec=spec,
         )
         out_txt.write_text(layout.full_text + "\n", encoding="utf-8")
         page.ocr_text_path = str(out_txt.relative_to(job.root))
-        _save_layout_outputs(page, job, image, layout)
+        if settings.save_layout_artifacts:
+            _save_layout_outputs(page, job, image, layout)
         page.status = "ok"
     except Exception as e:
         page.status = "error"
@@ -187,9 +190,10 @@ def ocr_pages(
     manifest.print_doc_type = spec.name
     manifest.print_ocr_combination = settings.ocr_combination or spec.ocr_combination
 
-    for page in pages:
-        if page.route != "print":
-            continue
+    targets = [p for p in pages if p.route == "print"]
+    workers = max(1, int(settings.parallel_pages))
+
+    def _run_one(page: PageRecord) -> None:
         ocr_single_page(
             page,
             job,
@@ -199,3 +203,13 @@ def ocr_pages(
             prompt_path=prompt_path,
             log_fn=log_fn,
         )
+
+    if workers == 1 or len(targets) <= 1:
+        for page in targets:
+            _run_one(page)
+        return
+
+    with ThreadPoolExecutor(max_workers=min(workers, len(targets))) as pool:
+        futures = {pool.submit(_run_one, page): page for page in targets}
+        for fut in as_completed(futures):
+            fut.result()

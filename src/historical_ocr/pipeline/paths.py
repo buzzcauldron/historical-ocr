@@ -9,6 +9,12 @@ def page_layout_json(job_root: Path, page_id: str) -> Path:
     return (job_root / "artifacts" / page_id / "layout.json").resolve()
 
 
+def page_glyph_decisions_path(job_root: Path, page_id: str) -> Path:
+    from historical_ocr.lib.glyph_heatmap import page_glyph_decisions_path as _path
+
+    return _path(job_root, page_id).resolve()
+
+
 def page_pagexml(job_root: Path, page_id: str) -> Path:
     return (job_root / "artifacts" / page_id / "page.xml").resolve()
 

@@ -60,6 +60,29 @@ historical-ocr run job -i book_1850.pdf --publication-year 1850
 historical-ocr print-types
 ```
 
+## Symbol filter (column rules, junk marks)
+
+Print OCR **drops non-letter junk by default** so Tesseract does not keep column rules as fake letters:
+
+1. **Tesseract blacklist** — `tessedit_char_blacklist=|_` (modern newspaper profiles include this in YAML)
+2. **Glyph / letterform gate** — for suspect tokens, crops each word box and classifies ink as **letterform**, **symbol**, **rule**, or **damage** (metrics adapted from manuscript-fingerprint). Rules and damage are never emitted; letterforms are kept even when OCR confidence is low.
+3. **Line heatmap band** — per-line median letter height sets the expected type body band before classifying marks.
+4. **Confidence gate** — fallback for tokens without glyph review
+5. **Line sanitizer** — trailing `|_:` and isolated rule tokens stripped after OCR
+
+```bash
+historical-ocr run job -i scan.tif --mode print              # filter on (default)
+historical-ocr run job -i scan.tif --mode print --no-symbol-filter
+# TXT review companions (only when glyph filtering dropped marks):
+#   export/{basename}.review.json   — what was removed from the TXT
+#   export/{basename}.review.png    — heatmap of dropped boxes only
+historical-ocr run job -i scan.tif --mode print --no-glyph-heatmap   # JSON only
+```
+
+Env: `HISTORICAL_OCR_SYMBOL_FILTER=0`, `HISTORICAL_OCR_SYMBOL_GLYPH_HEATMAP=0`, `HISTORICAL_OCR_TESSERACT_CHAR_BLACKLIST=|_`. Glyph decisions run during OCR (internal); review PNG/JSON are written at **export** beside the production `.txt`. `--fast` skips glyph review and review artifacts.
+
+Per doc-type override in YAML: `ocr.char_blacklist: "|_"` (see `twentieth_century.yaml`).
+
 ## OCR combinations
 
 | Mode | Behavior |

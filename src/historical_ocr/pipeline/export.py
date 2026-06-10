@@ -8,7 +8,8 @@ from pathlib import Path
 
 import yaml
 
-from historical_ocr.config import JobPaths
+from historical_ocr.config import JobPaths, Settings
+from historical_ocr.lib.glyph_heatmap import export_text_review
 from historical_ocr.lib.document_export import (
     PageSlice,
     build_delivery_manifest,
@@ -111,14 +112,22 @@ def _export_page_internal(
     )
 
 
-def export_job(job: JobPaths, manifest: JobManifest) -> dict[str, str]:
+def export_job(
+    job: JobPaths,
+    manifest: JobManifest,
+    *,
+    export_internal: bool = True,
+    tei_facsimile: bool = True,
+    settings: Settings | None = None,
+) -> dict[str, str]:
     job.ensure()
     internal = job.export / "_internal"
     txt_dir = internal / "txt"
     xml_dir = internal / "xml"
     tei_dir = internal / "tei"
-    for d in (txt_dir, xml_dir, tei_dir):
-        d.mkdir(parents=True, exist_ok=True)
+    if export_internal:
+        for d in (txt_dir, xml_dir, tei_dir):
+            d.mkdir(parents=True, exist_ok=True)
 
     basename = resolve_export_basename(manifest)
     manifest.export_basename = basename
@@ -149,30 +158,37 @@ def export_job(job: JobPaths, manifest: JobManifest) -> dict[str, str]:
             ),
         )
 
-        export_txt, export_xml, export_tei = _export_page_internal(
-            page,
-            job,
-            txt_dir=txt_dir,
-            xml_dir=xml_dir,
-            tei_dir=tei_dir,
-        )
-
-        jsonl_lines.append(
-            json.dumps(
-                {
-                    "page_id": page.page_id,
-                    "route": page.route,
-                    "text": text,
-                    "export_txt": export_txt,
-                    "export_xml": export_xml,
-                    "export_tei": export_tei,
-                },
-                ensure_ascii=False,
-            ),
-        )
+        export_txt = export_xml = export_tei = None
+        if export_internal:
+            export_txt, export_xml, export_tei = _export_page_internal(
+                page,
+                job,
+                txt_dir=txt_dir,
+                xml_dir=xml_dir,
+                tei_dir=tei_dir,
+            )
+            jsonl_lines.append(
+                json.dumps(
+                    {
+                        "page_id": page.page_id,
+                        "route": page.route,
+                        "text": text,
+                        "export_txt": export_txt,
+                        "export_xml": export_xml,
+                        "export_tei": export_tei,
+                    },
+                    ensure_ascii=False,
+                ),
+            )
 
     document_txt.write_text(merge_document_txt(slices), encoding="utf-8")
-    write_document_tei(document_xml, slices, manifest, title=basename)
+    write_document_tei(
+        document_xml,
+        slices,
+        manifest,
+        title=basename,
+        include_facsimile=tei_facsimile,
+    )
 
     figures_dir = internal / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
@@ -191,30 +207,60 @@ def export_job(job: JobPaths, manifest: JobManifest) -> dict[str, str]:
         "document_txt": str(document_txt.relative_to(job.root)),
         "document_xml": str(document_xml.relative_to(job.root)),
     }
+
+    s = settings or Settings()
+    if s.symbol_filter and not s.fast_mode:
+        review_pages = [
+            (p.page_id, Path(p.image_path).name)
+            for p in manifest.pages
+            if p.status == "ok"
+        ]
+        deliverables.update(
+            export_text_review(
+                job.root,
+                job.pages,
+                job.export,
+                basename=basename,
+                document_txt=document_txt,
+                pages=review_pages,
+                render_heatmap=s.symbol_glyph_heatmap,
+            ),
+        )
+
     write_delivery_json(
         delivery_json,
         build_delivery_manifest(manifest, deliverables=deliverables, page_count=len(slices)),
     )
-    write_checksums(checksums_path, [document_txt, document_xml])
-    corpus_jsonl.write_text(
-        "\n".join(jsonl_lines) + ("\n" if jsonl_lines else ""),
-        encoding="utf-8",
-    )
+    checksum_files = [document_txt, document_xml]
+    for key in ("text_review_json", "text_review_heatmap"):
+        if key in deliverables:
+            checksum_files.append(job.root / deliverables[key])
+    write_checksums(checksums_path, checksum_files)
+    if export_internal:
+        corpus_jsonl.write_text(
+            "\n".join(jsonl_lines) + ("\n" if jsonl_lines else ""),
+            encoding="utf-8",
+        )
 
     manifest.export = {
         **deliverables,
         "delivery_json": str(delivery_json.relative_to(job.root)),
         "checksums": str(checksums_path.relative_to(job.root)),
-        "internal_txt_dir": str(txt_dir.relative_to(job.root)),
-        "internal_xml_dir": str(xml_dir.relative_to(job.root)),
-        "internal_tei_dir": str(tei_dir.relative_to(job.root)),
-        "corpus_jsonl": str(corpus_jsonl.relative_to(job.root)),
         "figures_dir": str(figures_dir.relative_to(job.root)),
         # Legacy aliases for scripts that expect these keys
         "corpus_txt": str(document_txt.relative_to(job.root)),
-        "txt_dir": str(txt_dir.relative_to(job.root)),
-        "xml_dir": str(xml_dir.relative_to(job.root)),
-        "tei_dir": str(tei_dir.relative_to(job.root)),
     }
+    if export_internal:
+        manifest.export.update(
+            {
+                "internal_txt_dir": str(txt_dir.relative_to(job.root)),
+                "internal_xml_dir": str(xml_dir.relative_to(job.root)),
+                "internal_tei_dir": str(tei_dir.relative_to(job.root)),
+                "corpus_jsonl": str(corpus_jsonl.relative_to(job.root)),
+                "txt_dir": str(txt_dir.relative_to(job.root)),
+                "xml_dir": str(xml_dir.relative_to(job.root)),
+                "tei_dir": str(tei_dir.relative_to(job.root)),
+            },
+        )
     job.manifest.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
     return manifest.export

@@ -146,6 +146,21 @@ def describe(*, lang_bundle: str | None = None) -> str:
     return " · ".join(parts)
 
 
+def build_config(
+    *,
+    psm: int,
+    char_blacklist: str | None = None,
+    char_whitelist: str | None = None,
+) -> str:
+    """Assemble Tesseract CLI config (PSM + optional character filters)."""
+    parts = [f"--psm {psm}"]
+    if char_whitelist:
+        parts.append(f"-c tessedit_char_whitelist={char_whitelist}")
+    elif char_blacklist:
+        parts.append(f"-c tessedit_char_blacklist={char_blacklist}")
+    return " ".join(parts)
+
+
 def ensure_ready(lang_bundle: str) -> None:
     """Raise with install hint if tesseract or required langs are missing."""
     if not available():

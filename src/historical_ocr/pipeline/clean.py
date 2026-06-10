@@ -59,6 +59,9 @@ def clean_print_pages(
         out.write_text(cleaned + "\n", encoding="utf-8")
         page.clean_text_path = str(out.relative_to(job.root))
 
+        if not settings.save_layout_artifacts:
+            continue
+
         layout_path = page_layout_json(job.root, page.page_id)
         layout = layout_from_clean_text(layout_path, cleaned)
         if layout is not None:

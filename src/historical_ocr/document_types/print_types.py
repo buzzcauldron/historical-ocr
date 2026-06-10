@@ -51,6 +51,8 @@ class PrintDocumentTypeSpec:
     ocr_model: str | None = None
     tesseract_lang: str = "lat+frk+eng"
     tesseract_psm: int = 6
+    tesseract_char_blacklist: str | None = None
+    tesseract_char_whitelist: str | None = None
 
     layout_backend: str = "tesseract"
     ocr_combination: str = "tesseract_then_clean"
@@ -91,6 +93,8 @@ def _parse_spec(name: str, raw: dict[str, Any], search_dirs: list[Path]) -> Prin
         ocr_model=ocr.get("model"),
         tesseract_lang=str(ocr.get("lang", "lat+frk+eng")),
         tesseract_psm=int(ocr.get("psm", 6)),
+        tesseract_char_blacklist=ocr.get("char_blacklist"),
+        tesseract_char_whitelist=ocr.get("char_whitelist"),
         layout_backend=str(layout.get("backend", "tesseract")),
         ocr_combination=str(raw.get("ocr_combination", "tesseract_then_clean")),
         normalization_mode=str(norm.get("mode", "normalized")),  # type: ignore[arg-type]

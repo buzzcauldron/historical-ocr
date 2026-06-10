@@ -42,6 +42,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         publication_year=args.publication_year,
         print_language=args.print_language,
         extract_figures=args.extract_figures,
+        fast=args.fast,
+        symbol_filter=args.symbol_filter,
+        glyph_heatmap=args.glyph_heatmap,
         log_fn=lambda m: print(m, file=sys.stderr, flush=True),
     )
     print(json.dumps(manifest.export, indent=2))
@@ -431,6 +434,32 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "After manuscript transcription, detect embedded images (DocLayNet), "
             "save crops, and insert [fig:id] protocol markers into YAML"
+        ),
+    )
+    run.add_argument(
+        "--fast",
+        action="store_true",
+        help=(
+            "Speed-first: smaller images, text-only Tesseract (no layout scan), "
+            "skip Underwood clean + internal per-page exports + TEI facsimile"
+        ),
+    )
+    run.add_argument(
+        "--symbol-filter",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Drop low-confidence symbol junk and blacklist column rules (|_) "
+            "in Tesseract (default on)"
+        ),
+    )
+    run.add_argument(
+        "--glyph-heatmap",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Write {basename}.review.png + .review.json beside production TXT "
+            "when glyph filtering drops marks (default on; off in --fast)"
         ),
     )
     run.set_defaults(func=cmd_run)

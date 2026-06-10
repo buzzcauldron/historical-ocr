@@ -96,9 +96,24 @@ def run_tesseract_backend(
     psm: int,
     preprocess: dict,
     settings=None,
+    print_spec: PrintDocumentTypeSpec | None = None,
 ) -> LayoutOcrResult:
-    from historical_ocr.lib.layout_ocr import ocr_image_with_layout
+    from historical_ocr.lib.layout_ocr import ocr_image_text_only, ocr_image_with_layout
+    from historical_ocr.lib.symbol_filter import resolve_symbol_filter
     from historical_ocr.ocr.preprocess import preprocess_for_ocr
+
+    filter_opts = resolve_symbol_filter(settings, print_spec) if settings else None
+    use_layout = settings is None or getattr(settings, "save_layout_artifacts", True)
+    ocr_fn = ocr_image_with_layout if use_layout else ocr_image_text_only
+
+    def _run(path: Path) -> LayoutOcrResult:
+        return ocr_fn(
+            path,
+            lang=lang,
+            psm=psm,
+            settings=settings,
+            filter_opts=filter_opts,
+        )
 
     if preprocess:
         import tempfile
@@ -107,7 +122,7 @@ def run_tesseract_backend(
         tmp = Path(tempfile.mkdtemp()) / f"{image.stem}_prep.jpg"
         processed.save(tmp, format="JPEG", quality=92)
         try:
-            return ocr_image_with_layout(tmp, lang=lang, psm=psm, settings=settings)
+            return _run(tmp)
         finally:
             tmp.unlink(missing_ok=True)
-    return ocr_image_with_layout(image, lang=lang, psm=psm, settings=settings)
+    return _run(image)

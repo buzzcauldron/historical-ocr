@@ -26,6 +26,7 @@ def _normalize_into_pages(src: Path, dest: Path, settings: Settings) -> Path:
         max_height=settings.max_image_height,
         max_pixels=settings.max_image_pixels,
         quality=settings.jpeg_quality,
+        optimize=settings.jpeg_optimize,
     )
     if meta.output.resolve() != src.resolve() and src.parent == dest.parent:
         src.unlink(missing_ok=True)
@@ -64,9 +65,7 @@ def prepare_pages(
                 )
         elif suffix in _IMAGE_SUFFIXES:
             dest = job.pages / f"{src.stem}.jpg"
-            if src.resolve() != dest.resolve():
-                shutil.copy2(src, dest)
-            normalized = _normalize_into_pages(dest, dest, settings)
+            normalized = _normalize_into_pages(src, dest, settings)
             pages.append(
                 PageRecord(
                     page_id=src.stem,

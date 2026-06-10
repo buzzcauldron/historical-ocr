@@ -176,6 +176,33 @@ def _prepare_and_resize(
     return img, orig_size
 
 
+def image_within_limits(
+    src: Path,
+    *,
+    max_width: int | None,
+    max_height: int | None,
+    max_pixels: int | None,
+    fmt: OutputFormat = "jpeg",
+) -> bool:
+    """True when ``src`` is already a suitable JPEG within size caps (skip re-encode)."""
+    if src.suffix.lower() not in (".jpg", ".jpeg"):
+        return False
+    try:
+        with Image.open(src) as im:
+            if im.format not in ("JPEG", "JPG"):
+                return False
+            w, h = im.size
+    except OSError:
+        return False
+    if max_pixels and w * h > max_pixels:
+        return False
+    if max_width and w > max_width:
+        return False
+    if max_height and h > max_height:
+        return False
+    return fmt == "jpeg"
+
+
 def normalize_page_image(
     src: Path,
     dst: Path,
@@ -188,10 +215,38 @@ def normalize_page_image(
     scale_xml: bool = True,
     force: bool = False,
     use_cucim: bool = False,
+    optimize: bool = True,
 ) -> ImageNormalizeMeta:
     """Resize/convert a page image for pipeline ingest. Returns size metadata."""
     dst = dst.with_suffix(".jpg" if fmt == "jpeg" else ".png")
     dst.parent.mkdir(parents=True, exist_ok=True)
+
+    if (
+        not force
+        and image_within_limits(
+            src,
+            max_width=max_width,
+            max_height=max_height,
+            max_pixels=max_pixels,
+            fmt=fmt,
+        )
+    ):
+        if src.resolve() != dst.resolve():
+            import shutil
+
+            shutil.copy2(src, dst)
+        with Image.open(dst) as im:
+            w, h = im.size
+        return ImageNormalizeMeta(
+            source=src,
+            output=dst,
+            orig_width=w,
+            orig_height=h,
+            width=w,
+            height=h,
+            resized=False,
+            format=fmt,
+        )
 
     if dst.is_file() and not force and src.resolve() == dst.resolve():
         with Image.open(dst) as im:
@@ -216,7 +271,7 @@ def normalize_page_image(
             max_pixels=max_pixels,
             use_cucim=use_cucim,
         )
-        save_kwargs: dict = {"optimize": True}
+        save_kwargs: dict = {"optimize": optimize}
         if fmt == "jpeg":
             save_kwargs["quality"] = quality
         img.save(dst, format=fmt.upper(), **save_kwargs)

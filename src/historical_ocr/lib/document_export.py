@@ -130,6 +130,7 @@ def write_document_tei(
     manifest: JobManifest,
     *,
     title: str | None = None,
+    include_facsimile: bool = True,
 ) -> None:
     root = ET.Element(f"{_T}TEI")
     root.append(_tei_header(manifest, title=title or manifest.job_id))
@@ -137,7 +138,9 @@ def write_document_tei(
     body = ET.SubElement(text_el, f"{_T}body")
     for sl in slices:
         _append_page_div(body, sl)
-    if any((sl.layout and sl.layout.lines) or sl.text.strip() for sl in slices):
+    if include_facsimile and any(
+        (sl.layout and sl.layout.lines) or sl.text.strip() for sl in slices
+    ):
         _append_facsimile(text_el, slices)
 
     tree = ET.ElementTree(root)

@@ -9,6 +9,7 @@ from historical_ocr.backends import fingerprint as fp_backend
 from historical_ocr.config import JobPaths, Settings
 from historical_ocr.models.manifest import FingerprintSummary, JobManifest
 from historical_ocr.pipeline.acquire import acquire_from_url, ingest_local
+from historical_ocr.lib.fast_presets import apply_fast_presets
 from historical_ocr.pipeline.export import export_job
 from historical_ocr.pipeline.manuscript import transcribe_pages
 from historical_ocr.pipeline.prepare import prepare_pages
@@ -46,14 +47,23 @@ def run_job(
     publication_year: int | None = None,
     print_language: str | None = None,
     extract_figures: bool = False,
+    fast: bool = False,
+    symbol_filter: bool | None = None,
+    glyph_heatmap: bool | None = None,
     log_fn: Callable[[str], None] | None = None,
 ) -> JobManifest:
     s = settings or Settings()
+    if fast or s.fast_mode:
+        s = apply_fast_presets(s)
     updates: dict = {}
     if extract_figures:
         updates["figure_extract_enabled"] = True
     if clean is not None:
         updates["clean_print"] = clean
+    if symbol_filter is not None:
+        updates["symbol_filter"] = symbol_filter
+    if glyph_heatmap is not None:
+        updates["symbol_glyph_heatmap"] = glyph_heatmap
     if print_doc_type:
         updates["print_doc_type"] = print_doc_type
     if ocr_combination:
@@ -152,7 +162,13 @@ def run_job(
         )
         clean_print_pages(manifest.pages, job, manifest, s, log_fn=_log)
 
-    export_job(job, manifest)
+    export_job(
+        job,
+        manifest,
+        export_internal=s.export_internal,
+        tei_facsimile=s.tei_facsimile,
+        settings=s,
+    )
     return manifest
 
 

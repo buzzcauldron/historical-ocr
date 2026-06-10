@@ -10,6 +10,7 @@ ocr:
   model: eng_modern_historical
   lang: eng
   psm: 3
+  char_blacklist: "|_"
 
 layout:
   backend: tesseract

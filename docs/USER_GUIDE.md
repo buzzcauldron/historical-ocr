@@ -185,3 +185,13 @@ historical-ocr tools                            # is everything installed?
 ```
 
 Your finished text: **`jobs/JOB/export/<source-filename>.txt`** (matches the name of the file you submitted)
+
+### Faster runs
+
+For speed over optional extras, add **`--fast`**:
+
+```bash
+historical-ocr run my-job -i scan.tif --mode print --fast
+```
+
+`--fast` uses smaller page images, text-only Tesseract (skips per-word layout), skips Underwood cleanup, and skips internal per-page XML copies. You still get the main **`.txt`** and **`.xml`** deliverables.

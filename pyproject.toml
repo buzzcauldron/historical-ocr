@@ -23,7 +23,7 @@ dependencies = [
 
 [project.optional-dependencies]
 pdf = ["pymupdf>=1.24", "numpy>=1.24"]
-print = ["pypdf>=4.0.0", "pdf2image>=1.16.0", "pytesseract>=0.3.10"]
+print = ["pypdf>=4.0.0", "pdf2image>=1.16.0", "pytesseract>=0.3.10", "numpy>=1.24"]
 dev = ["pytest>=8.0"]
 ml = [
   "torch>=2.2",
