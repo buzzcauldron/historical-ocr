@@ -1,0 +1,25 @@
+# German Fraktur and early modern continental print (1600–1800)
+name: german_fraktur
+language: de-Latn
+era: early_modern
+era_range: 1600-1800
+script: fraktur
+typeface: blackletter
+
+ocr:
+  model: deu_fraktur
+  lang: deu_latf+deu+lat
+  psm: 6
+  preprocess:
+    autocontrast: true
+    sharpen: true
+
+layout:
+  backend: tesseract
+
+ocr_combination: tesseract_then_clean
+
+normalization:
+  mode: normalized
+
+notes: Continental Fraktur; enable deu_latf traineddata in Tesseract.

@@ -1,0 +1,33 @@
+# EEBO / STC era English blackletter and mixed Latin (1475–1640)
+name: eebo_blackletter
+language: en-Latn
+era: early_modern
+era_range: 1475-1640
+# For 1500+ English prefer early_modern_english; use this for Latin-heavy blackletter.
+script: latin
+typeface: blackletter
+
+ocr:
+  model: eebo_mixed
+  lang: lat+frk+eng
+  psm: 6
+  preprocess:
+    autocontrast: true
+    grayscale: true
+
+layout:
+  backend: tesseract
+
+ocr_combination: tesseract_then_clean
+
+normalization:
+  mode: normalized
+
+shell:
+  doc_type: early_modern_latin
+  htr_combination: tesseract_htr
+  lineation: kraken
+
+notes: >
+  Default for EEBO/HathiTrust early English print. Uses fraktur + Latin + English
+  Tesseract stacks. Underwood normalization for diachronic comparison.

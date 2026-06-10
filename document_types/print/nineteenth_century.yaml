@@ -1,0 +1,22 @@
+# Nineteenth-century historical print (1800–1900)
+name: nineteenth_century
+language: en-Latn
+era: nineteenth_century
+era_range: 1800-1900
+script: antiqua
+typeface: roman
+
+ocr:
+  model: eng_modern_historical
+  lang: eng
+  psm: 3
+
+layout:
+  backend: tesseract
+
+ocr_combination: tesseract_then_clean
+
+normalization:
+  mode: modern
+
+notes: Modern orthography with occasional long-s in reprints; full variant normalization.

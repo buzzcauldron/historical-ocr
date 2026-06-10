@@ -1,0 +1,9 @@
+name: fra_early_modern
+engine: tesseract
+tesseract_lang: fra+lat+eng
+psm: 6
+languages: [fr-Latn]
+eras: [early_modern, enlightenment]
+scripts: [antiqua, roman]
+preprocess:
+  autocontrast: true

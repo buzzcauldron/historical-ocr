@@ -10,6 +10,7 @@ Curated tools that complement **historical-ocr**. Grouped by pipeline stage.
 | **transcription-shell** | [buzzcauldron/transcription-shell](https://github.com/buzzcauldron/transcription-shell) | Manuscript: lineation + protocol YAML (subprocess) |
 | **manuscript-fingerprint** | [buzzcauldron/manuscript-fingerprint](https://github.com/buzzcauldron/manuscript-fingerprint) | Early modern print type-case ID (subprocess) |
 | **strigil** | [sethstrickland/strigil](https://github.com/sethstrickland/strigil) | Full archival fetch (use directly for EEBO/HathiTrust crawl; we vendor minimal IIIF fetch) |
+| **bib-ocr** | [buzzcauldron/bib-ocr](https://github.com/buzzcauldron/bib-ocr) | PDF density targeting + optional citation cascade (`historical-ocr bib-ocr`) |
 
 ### Ted Underwood cleaner (detail)
 
@@ -64,8 +65,7 @@ Env: `HISTORICAL_OCR_CLEAN_PRINT=0`, `HISTORICAL_OCR_CLEAN_VARIANTS=1`, `HISTORI
 | **transcription-protocol** | [buzzcauldron/transcription-protocol](https://github.com/buzzcauldron/transcription-protocol) | Evidence-grade YAML schema + TEI export |
 | **transcription-shell** | [buzzcauldron/transcription-shell](https://github.com/buzzcauldron/transcription-shell) | Lineation → LLM → validated YAML |
 | **expand-diplomatic** | buzzcauldron (sibling) | Abbreviation expansion for evaluation |
-| **bib-ocr** | [buzzcauldron/bib-ocr](https://github.com/buzzcauldron/bib-ocr) | PDF bibliography OCR (research-party) |
-| **research-party** | buzzcauldron (private) | Pack compiler, citation OCR ingest |
+| **research-party** | buzzcauldron (private) | Pack compiler, citation OCR ingest (uses bib-ocr) |
 
 ---
 

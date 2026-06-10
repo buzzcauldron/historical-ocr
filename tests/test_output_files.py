@@ -1,4 +1,4 @@
-"""Integration: pipeline must emit per-page .txt and .xml under export/."""
+"""Integration: pipeline must emit production document.txt + document.xml."""
 
 from __future__ import annotations
 
@@ -49,25 +49,32 @@ def print_job_export() -> dict:
     return json.loads(proc.stdout.strip())
 
 
-def test_export_paths_include_txt_and_xml_dirs(print_job_export: dict) -> None:
-    assert "txt_dir" in print_job_export
-    assert "xml_dir" in print_job_export
+def test_production_deliverables_exist(print_job_export: dict) -> None:
+    assert "document_txt" in print_job_export
+    assert "document_xml" in print_job_export
+    doc_txt = JOBS / print_job_export["document_txt"]
+    doc_xml = JOBS / print_job_export["document_xml"]
+    assert doc_txt.name == "sample_print.txt"
+    assert doc_xml.name == "sample_print.xml"
+    assert doc_txt.is_file() and doc_txt.stat().st_size > 0
+    assert doc_xml.is_file() and doc_xml.stat().st_size > 0
+    assert b"TEI" in doc_xml.read_bytes()[:400]
+    assert "##" not in doc_txt.read_text(encoding="utf-8")
 
 
-def test_per_page_txt_and_xml_exist(print_job_export: dict) -> None:
-    txt_dir = JOBS / print_job_export["txt_dir"]
-    xml_dir = JOBS / print_job_export["xml_dir"]
-
-    txt_files = list(txt_dir.glob("*.txt"))
-    xml_files = list(xml_dir.glob("*.xml"))
-
-    assert len(txt_files) >= 1, f"no .txt in {txt_dir}"
-    assert len(xml_files) >= 1, f"no .xml in {xml_dir}"
-    assert txt_files[0].stat().st_size > 0
-    assert xml_files[0].stat().st_size > 0
-    assert b"TEI" in xml_files[0].read_bytes()[:200]
+def test_delivery_manifest_and_checksums(print_job_export: dict) -> None:
+    delivery = JOBS / print_job_export["delivery_json"]
+    checksums = JOBS / print_job_export["checksums"]
+    assert delivery.is_file()
+    assert checksums.is_file()
+    data = json.loads(delivery.read_text(encoding="utf-8"))
+    assert data["page_count"] >= 1
+    assert "document_txt" in data["deliverables"]
 
 
-def test_corpus_aggregates_exist(print_job_export: dict) -> None:
-    assert (JOBS / print_job_export["corpus_txt"]).is_file()
+def test_internal_per_page_artifacts(print_job_export: dict) -> None:
+    txt_dir = JOBS / print_job_export["internal_txt_dir"]
+    xml_dir = JOBS / print_job_export["internal_xml_dir"]
+    assert len(list(txt_dir.glob("*.txt"))) >= 1
+    assert len(list(xml_dir.glob("*.xml"))) >= 1
     assert (JOBS / print_job_export["corpus_jsonl"]).is_file()

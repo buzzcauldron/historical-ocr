@@ -1,0 +1,22 @@
+# Twentieth-century print and reprints (1900–2000)
+name: twentieth_century
+language: en-Latn
+era: twentieth_century
+era_range: 1900-2000
+script: antiqua
+typeface: roman
+
+ocr:
+  model: eng_modern_historical
+  lang: eng
+  psm: 3
+
+layout:
+  backend: tesseract
+
+ocr_combination: pdf_text_first
+
+normalization:
+  mode: modern
+
+notes: Prefer embedded PDF text for born-digital reprints; Tesseract fallback for scans.

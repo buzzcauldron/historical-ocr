@@ -1,0 +1,28 @@
+# Humanist roman type, Latin-heavy (1500–1650)
+name: humanist_roman
+language: la-Latn
+era: renaissance
+era_range: 1500-1650
+script: humanist
+typeface: roman
+
+ocr:
+  model: latin_humanist
+  lang: lat+ita+eng
+  psm: 6
+  preprocess:
+    autocontrast: true
+
+layout:
+  backend: tesseract
+
+ocr_combination: tesseract_then_clean
+
+normalization:
+  mode: diplomatic
+
+shell:
+  doc_type: early_modern_latin
+  htr_combination: tesseract_htr
+
+notes: Diplomatic Latin roman — preserves long-s and historical spelling.

@@ -20,6 +20,8 @@ def run_page(
     provider: str,
     model: str | None = None,
     lineation: str = "glyph_machina",
+    doc_type: str | None = None,
+    htr_combination: str | None = None,
     artifacts_dir: Path,
 ) -> subprocess.CompletedProcess[str]:
     if not available():
@@ -44,9 +46,51 @@ def run_page(
     ]
     if model:
         cmd.extend(["--model", model])
+    if doc_type:
+        cmd.extend(["--doc-type", doc_type])
+    if htr_combination:
+        cmd.extend(["--htr-combination", htr_combination])
 
     env = {**os.environ, "TRANSCRIBER_SHELL_ARTIFACTS_DIR": str(artifacts_dir)}
+    env["TRANSCRIBER_SHELL_TESSERACT_ENABLED"] = "1"
     return subprocess.run(cmd, check=False, capture_output=True, text=True, env=env)
+
+
+def run_print_page(
+    *,
+    job_id: str,
+    image: Path,
+    prompt: Path,
+    doc_type: str,
+    provider: str,
+    model: str | None = None,
+    lineation: str = "kraken",
+    htr_combination: str = "tesseract_htr",
+    artifacts_dir: Path,
+) -> subprocess.CompletedProcess[str]:
+    """Fork to transcription-shell for print-heavy doc_types (early modern Latin, etc.)."""
+    return run_page(
+        job_id=job_id,
+        image=image,
+        prompt=prompt,
+        provider=provider,
+        model=model,
+        lineation=lineation,
+        doc_type=doc_type,
+        htr_combination=htr_combination,
+        artifacts_dir=artifacts_dir,
+    )
+
+
+def find_lines_xml(artifacts_dir: Path, job_id: str) -> Path | None:
+    candidates = [
+        artifacts_dir / job_id / "lines.xml",
+        artifacts_dir / job_id / "page.xml",
+    ]
+    for p in candidates:
+        if p.is_file() and p.stat().st_size > 0:
+            return p
+    return None
 
 
 def find_transcription_yaml(artifacts_dir: Path, job_id: str, image: Path) -> Path | None:

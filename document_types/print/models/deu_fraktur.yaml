@@ -1,0 +1,11 @@
+name: deu_fraktur
+engine: tesseract
+tesseract_lang: deu_latf+deu+lat
+psm: 6
+languages: [de-Latn]
+eras: [early_modern]
+scripts: [fraktur]
+typefaces: [blackletter]
+preprocess:
+  autocontrast: true
+  sharpen: true

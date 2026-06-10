@@ -1,0 +1,8 @@
+name: eng_modern_historical
+engine: tesseract
+tesseract_lang: eng
+psm: 3
+languages: [en-Latn]
+eras: [nineteenth_century, modern]
+scripts: [antiqua]
+typefaces: [roman]

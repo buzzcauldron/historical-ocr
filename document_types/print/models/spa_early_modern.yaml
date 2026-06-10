@@ -1,0 +1,8 @@
+name: spa_early_modern
+engine: tesseract
+tesseract_lang: spa+lat+eng
+psm: 6
+languages: [es-Latn]
+eras: [early_modern, enlightenment]
+preprocess:
+  autocontrast: true

@@ -1,0 +1,12 @@
+name: eebo_mixed
+engine: tesseract
+tesseract_lang: lat+frk+eng
+psm: 6
+languages: [en-Latn, la-Latn]
+eras: [early_modern, renaissance]
+scripts: [latin, blackletter]
+typefaces: [blackletter, fraktur]
+preprocess:
+  autocontrast: true
+  grayscale: true
+notes: EEBO-era mixed Latin and English blackletter.

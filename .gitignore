@@ -4,6 +4,8 @@ __pycache__/
 .pytest_cache/
 .env
 jobs/
+data/page_cnn/
+models/*.pt
 dist/
 build/
 *.egg-info/

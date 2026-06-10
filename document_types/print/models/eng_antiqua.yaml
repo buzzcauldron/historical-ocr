@@ -1,0 +1,8 @@
+name: eng_antiqua
+engine: tesseract
+tesseract_lang: eng+lat
+psm: 6
+languages: [en-Latn]
+eras: [enlightenment]
+scripts: [antiqua]
+typefaces: [roman]

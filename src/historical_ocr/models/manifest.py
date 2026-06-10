@@ -27,6 +27,9 @@ class PageRecord(BaseModel):
     tei_path: str | None = None
     ocr_text_path: str | None = None
     clean_text_path: str | None = None
+    layout_path: str | None = None
+    pagexml_path: str | None = None
+    print_doc_type: str | None = None
     fingerprint_score: float | None = None
     errors: list[str] = Field(default_factory=list)
 
@@ -42,10 +45,19 @@ class JobManifest(BaseModel):
     created_at: str = Field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat(),
     )
+    export_basename: str | None = Field(
+        default=None,
+        description="Stem of the submitted source file; names production exports.",
+    )
     sources: list[SourceRecord] = Field(default_factory=list)
     material_mode: Literal["auto", "manuscript", "print"] = "auto"
     resolved_material: Literal["manuscript", "print", "mixed"] | None = None
     fingerprint: FingerprintSummary | None = None
+    print_doc_type: str | None = None
+    print_ocr_combination: str | None = None
+    normalization_mode: str | None = None
+    publication_year: int | None = None
+    print_language: str | None = None
     pages: list[PageRecord] = Field(default_factory=list)
     export: dict[str, str] = Field(default_factory=dict)
 

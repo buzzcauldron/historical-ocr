@@ -1,0 +1,117 @@
+# Page CNN training sources — print vs manuscript page images.
+# Fetch: historical-ocr cnn fetch --source <id>
+# Add custom folders: historical-ocr cnn train --extra-data /path/to/more
+
+version: 1
+
+# Hugging Face datasets (auto-download via `cnn fetch`).
+huggingface:
+  ocr-quality:
+    label: print
+    repo: Aslan-mingye/OCR-Quality
+    split: train
+    image_field: image
+    default_limit: 1000
+    citation: "https://arxiv.org/html/2510.21774v1"
+    notes: "1k PDF pages @ 300 DPI; OCR quality benchmark (all printed)."
+
+  ocr-pdf-degraded:
+    label: print
+    repo: racineai/ocr-pdf-degraded
+    split: train
+    image_field: image
+    default_limit: 5000
+    citation: "https://huggingface.co/datasets/racineai/ocr-pdf-degraded"
+    notes: "Synthetically degraded print PDF pages (~25k)."
+
+  pixparse-pdfa:
+    label: print
+    repo: pixparse/pdfa-eng-wds
+    split: train
+    image_field: tif
+    streaming: true
+    default_limit: 2000
+    collection: "https://huggingface.co/collections/pixparse/pdf-document-ocr-datasets"
+    notes: "English PDF corpus (webdataset); sample with --limit."
+
+  pixparse-idl:
+    label: print
+    repo: pixparse/idl-wds
+    split: train
+    image_field: tif
+    streaming: true
+    default_limit: 2000
+    collection: "https://huggingface.co/collections/pixparse/pdf-document-ocr-datasets"
+    notes: "Industry Documents Library pages (webdataset); sample with --limit."
+
+# Curated from xinke-wang/OCRDatasets — fetch copies page images when a local
+# checkout or download path is provided (--ocrdatasets-root).
+ocrdatasets:
+  iam-histdb:
+    label: manuscript
+    category: historical_document
+    ocrdatasets_ref: "IAM-HistDB"
+    glob: "**/*.{jpg,jpeg,png,tif,tiff,bmp}"
+    default_limit: 500
+    url: "https://fki.tic.heia-fr.ch/databases/iam-historical-document-database"
+    notes: "Historical Latin/German/English; registration may be required."
+
+  pinkas:
+    label: manuscript
+    category: historical_document
+    ocrdatasets_ref: "Pinkas"
+    glob: "**/*.{jpg,jpeg,png,tif,tiff,bmp}"
+    default_limit: 500
+    notes: "Hebrew historical manuscripts (ICDAR 2019)."
+
+  sleukrith:
+    label: manuscript
+    category: historical_document
+    ocrdatasets_ref: "SleukRith-Set"
+    glob: "**/*.{jpg,jpeg,png,tif,tiff,bmp}"
+    default_limit: 500
+    notes: "Khmer palm-leaf manuscripts."
+
+  mthv2:
+    label: manuscript
+    category: historical_document
+    ocrdatasets_ref: "MTHv2"
+    glob: "**/*.{jpg,jpeg,png,tif,tiff,bmp}"
+    default_limit: 800
+    notes: "Ancient Chinese book pages."
+
+  iam-online:
+    label: manuscript
+    category: handwritten
+    ocrdatasets_ref: "IAM ONLINE Handwritting Data"
+    glob: "**/*.{png,jpg}"
+    default_limit: 2000
+    notes: "Modern handwriting; useful manuscript proxy."
+
+# Remote GT paths (Akdeniz → Bridges). Harvest with --akdeniz-root or env.
+remote_gt:
+  akdeniz-kraken-vatlib:
+    label: manuscript
+    relative_paths:
+      - kraken-vatlib-gt
+      - src/kraken-vatlib-gt
+    glob: "**/*.{jpg,jpeg,png,tif,tiff,bmp}"
+    default_limit: 2000
+    notes: "Vatican Library manuscript line/page GT on Akdeniz."
+
+  akdeniz-kraken-cp40:
+    label: manuscript
+    relative_paths:
+      - kraken-cp40-gt
+    glob: "**/*.{jpg,jpeg,png,tif,tiff,bmp}"
+    default_limit: 2000
+    notes: "CP40 medieval English court rolls."
+
+  akdeniz-deed-finetune:
+    label: manuscript
+    relative_paths:
+      - deed-finetune-gt
+      - src/deed-finetune-gt
+    glob: "**/*.{jpg,jpeg,png,tif,tiff,bmp}"
+    default_limit: 2000
+    notes: "Deed finetune GT images."

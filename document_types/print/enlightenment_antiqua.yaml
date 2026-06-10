@@ -1,0 +1,22 @@
+# Enlightenment antiqua / transitional roman (1700–1800)
+name: enlightenment_antiqua
+language: en-Latn
+era: enlightenment
+era_range: 1700-1800
+script: antiqua
+typeface: roman
+
+ocr:
+  model: eng_antiqua
+  lang: eng+lat
+  psm: 6
+
+layout:
+  backend: tesseract
+
+ocr_combination: tesseract_then_clean
+
+normalization:
+  mode: normalized
+
+notes: Long-s still common; Underwood rules handle most English normalization.

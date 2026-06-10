@@ -1,0 +1,22 @@
+# Alias profile: twentieth-century + contemporary (1900+)
+name: modern_historical
+language: en-Latn
+era: modern
+era_range: 1900-
+script: antiqua
+typeface: roman
+
+ocr:
+  model: eng_modern_historical
+  lang: eng
+  psm: 3
+
+layout:
+  backend: tesseract
+
+ocr_combination: pdf_text_first
+
+normalization:
+  mode: modern
+
+notes: Prefer embedded PDF text when available; Tesseract fallback for scans.

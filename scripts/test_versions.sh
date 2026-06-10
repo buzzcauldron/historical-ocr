@@ -27,31 +27,31 @@ rm -rf "$ROOT/jobs/$JOB"
 echo "=== print OCR (no clean) ==="
 historical-ocr run "$JOB" -i "$PDF" --mode print --no-clean
 
-TXT_DIR="$ROOT/jobs/$JOB/export/txt"
-XML_DIR="$ROOT/jobs/$JOB/export/xml"
+DOC_TXT="$ROOT/jobs/$JOB/export/document.txt"
+DOC_XML="$ROOT/jobs/$JOB/export/document.xml"
+DELIVERY="$ROOT/jobs/$JOB/export/delivery.json"
 fail=0
 
-shopt -s nullglob
-txts=("$TXT_DIR"/*.txt)
-xmls=("$XML_DIR"/*.xml)
-shopt -u nullglob
-
-if [[ ${#txts[@]} -lt 1 ]]; then
-  echo "FAIL: no export/txt/*.txt"
+if [[ ! -f "$DOC_TXT" ]]; then
+  echo "FAIL: missing export/document.txt"
   fail=1
 fi
-if [[ ${#xmls[@]} -lt 1 ]]; then
-  echo "FAIL: no export/xml/*.xml"
+if [[ ! -f "$DOC_XML" ]]; then
+  echo "FAIL: missing export/document.xml"
+  fail=1
+fi
+if [[ ! -f "$DELIVERY" ]]; then
+  echo "FAIL: missing export/delivery.json"
   fail=1
 fi
 
-for f in "${txts[@]}"; do
-  echo "  txt: $f ($(wc -c <"$f") bytes)"
-done
-for f in "${xmls[@]}"; do
-  echo "  xml: $f ($(wc -c <"$f") bytes)"
-  head -n 3 "$f"
-done
+if [[ -f "$DOC_TXT" ]]; then
+  echo "  document.txt: $DOC_TXT ($(wc -c <"$DOC_TXT") bytes)"
+fi
+if [[ -f "$DOC_XML" ]]; then
+  echo "  document.xml: $DOC_XML ($(wc -c <"$DOC_XML") bytes)"
+  head -n 3 "$DOC_XML"
+fi
 
 if command -v ocr-cleanup >/dev/null 2>&1; then
   echo ""
@@ -60,11 +60,11 @@ if command -v ocr-cleanup >/dev/null 2>&1; then
   rm -rf "$ROOT/jobs/$JOB2"
   historical-ocr run "$JOB2" -i "$PDF" --mode print --clean
   shopt -s nullglob
-  c_txts=("$ROOT/jobs/$JOB2/export/txt"/*.txt)
+  c_doc="$ROOT/jobs/$JOB2/export/document.txt"
   c_raw=("$ROOT/jobs/$JOB2/clean"/*.txt)
   shopt -u nullglob
-  if [[ ${#c_txts[@]} -lt 1 ]]; then
-    echo "FAIL: clean job missing export/txt"
+  if [[ ! -f "$c_doc" ]]; then
+    echo "FAIL: clean job missing export/document.txt"
     fail=1
   fi
   if [[ ${#c_raw[@]} -lt 1 ]]; then
@@ -79,4 +79,4 @@ historical-ocr tools
 if [[ $fail -ne 0 ]]; then
   exit 1
 fi
-echo "OK: txt + xml outputs verified"
+echo "OK: document.txt + document.xml verified"

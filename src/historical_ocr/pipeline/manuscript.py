@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from typing import Callable
 
@@ -71,4 +72,39 @@ def transcribe_pages(
         tei_out = job.export / "tei" / f"{page.page_id}.xml"
         yaml_to_tei(yaml_path, tei_out)
         page.tei_path = str(tei_out.relative_to(job.root))
+
+        lines_xml = shell.find_lines_xml(job.artifacts, page.page_id)
+
+        if settings.figure_extract_enabled:
+            try:
+                from historical_ocr.pipeline.figure_extract import extract_figures_for_page
+
+                report = extract_figures_for_page(
+                    image_path=image,
+                    lines_xml_path=lines_xml,
+                    transcription_yaml_path=yaml_path,
+                    settings=settings,
+                )
+                for w in report.warnings:
+                    _log(f"figures warning ({page.page_id}): {w}")
+                if report.figures:
+                    _log(
+                        f"figures ({page.page_id}): {len(report.figures)} detected "
+                        f"({report.backend})"
+                    )
+                    data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+                    if isinstance(data, dict):
+                        plain = plain_text_from_yaml_dict(data)
+                        txt_path.write_text(plain + "\n", encoding="utf-8")
+                        yaml_to_tei(yaml_path, tei_out)
+            except Exception as exc:
+                _log(f"figures error ({page.page_id}): {exc}")
+
+        if lines_xml is not None:
+            pagexml_out = job.artifacts / page.page_id / "page.xml"
+            pagexml_out.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(lines_xml, pagexml_out)
+            page.pagexml_path = str(pagexml_out.relative_to(job.root))
+            page.layout_path = str(pagexml_out.relative_to(job.root))
+
         page.status = "ok"

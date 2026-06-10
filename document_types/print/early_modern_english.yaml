@@ -1,0 +1,32 @@
+# Early modern English print — secretary hand, mixed Latin (1500–1700)
+name: early_modern_english
+language: en-Latn
+era: early_modern
+era_range: 1500-1700
+script: secretary_hand
+typeface: mixed
+
+ocr:
+  model: eng_secretary
+  lang: eng+lat+frk
+  psm: 6
+  preprocess:
+    autocontrast: true
+    grayscale: true
+
+layout:
+  backend: tesseract
+
+ocr_combination: tesseract_then_clean
+
+normalization:
+  mode: normalized
+
+shell:
+  doc_type: early_modern_english
+  htr_combination: tesseract_htr
+  lineation: kraken
+
+notes: >
+  STC/Wing era English with secretary hand and Latin formulae. Primary profile for
+  16th–17th century English print after initial blackletter transition.

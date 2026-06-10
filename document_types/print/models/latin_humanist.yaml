@@ -1,0 +1,10 @@
+name: latin_humanist
+engine: tesseract
+tesseract_lang: lat+ita+eng
+psm: 6
+languages: [la-Latn]
+eras: [renaissance, early_modern]
+scripts: [humanist, latin]
+typefaces: [roman]
+preprocess:
+  autocontrast: true

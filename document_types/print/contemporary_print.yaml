@@ -1,0 +1,22 @@
+# Contemporary scans and digital PDFs (2000–present)
+name: contemporary_print
+language: en-Latn
+era: contemporary
+era_range: 2000-
+script: antiqua
+typeface: roman
+
+ocr:
+  model: eng_modern_historical
+  lang: eng
+  psm: 3
+
+layout:
+  backend: tesseract
+
+ocr_combination: pdf_text_first
+
+normalization:
+  mode: modern
+
+notes: Modern library scans, HathiTrust/Google Books re-digitizations, born-digital PDFs.
