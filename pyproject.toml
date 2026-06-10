@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "historical-ocr"
+version = "0.1.0"
+description = "Self-contained pipeline for computational-ready text from historical sources"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "historical-ocr contributors" }]
+dependencies = [
+  "pydantic>=2.0",
+  "pydantic-settings>=2.0",
+  "pyyaml>=6.0",
+  "python-dotenv>=1.0.0",
+  "httpx>=0.27.0",
+  "beautifulsoup4>=4.12.0",
+  "lxml>=5.0",
+  "pillow>=10.0.0",
+]
+
+[project.optional-dependencies]
+pdf = ["pymupdf>=1.24"]
+print = ["pypdf>=4.0.0", "pdf2image>=1.16.0", "pytesseract>=0.3.10"]
+dev = ["pytest>=8.0"]
+all = ["historical-ocr[pdf,print,dev]"]
+
+[project.scripts]
+historical-ocr = "historical_ocr.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
