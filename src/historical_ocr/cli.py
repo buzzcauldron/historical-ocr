@@ -45,6 +45,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         fingerprint=args.fingerprint,
         extract_figures=args.extract_figures,
         deskew=args.deskew,
+        overlaid_ocr=args.overlaid_ocr,
         log_fn=lambda m: print(m, file=sys.stderr, flush=True),
     )
     print(json.dumps(manifest.export, indent=2))
@@ -754,6 +755,12 @@ def build_parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         default=None,
         help="Straighten page rotation before OCR (default on for medium/high)",
+    )
+    run.add_argument(
+        "--overlaid-ocr",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="OCR ink-zone overlays from heatmap columns/sections (default on for medium/high)",
     )
     run.set_defaults(func=cmd_run)
 

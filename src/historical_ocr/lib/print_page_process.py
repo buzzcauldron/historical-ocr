@@ -14,6 +14,7 @@ from historical_ocr.lib.handwriting_detect import (
     apply_handwriting_hint,
     assess_handwriting,
 )
+from historical_ocr.lib.ink_layout import InkLayout
 from historical_ocr.lib.layout_ocr import LayoutOcrResult
 from historical_ocr.models.manifest import JobManifest, PageRecord
 
@@ -28,6 +29,9 @@ class PageProcessCounts:
     damage_llm_repairs: int = 0
     handwriting_gemini: int = 0
     handwriting_extent: str = "none"
+    ink_s: float = 0.0
+    ocr_s: float = 0.0
+    post_s: float = 0.0
     elapsed_s: float = 0.0
     extra: dict[str, int] = field(default_factory=dict)
 
@@ -49,6 +53,10 @@ class PageProcessCounts:
         ]
         if self.ink_sections:
             parts.append(f"ink={self.ink_columns}c/{self.ink_sections}s")
+        if self.ink_s or self.ocr_s or self.post_s:
+            parts.append(
+                f"time=ink:{self.ink_s:.1f}s ocr:{self.ocr_s:.1f}s post:{self.post_s:.1f}s",
+            )
         if self.damage_retries:
             parts.append(f"dmg-retry={self.damage_retries}")
         if self.damage_llm_repairs:
@@ -74,30 +82,31 @@ def prepare_ink_layout(
     spec: PrintDocumentTypeSpec | None,
     *,
     log_fn: Callable[[str], None] | None = None,
-) -> PageProcessCounts:
+) -> tuple[PageProcessCounts, InkLayout | None]:
     counts = PageProcessCounts()
     if not settings.save_layout_artifacts:
-        return counts
+        return counts, None
 
     from historical_ocr.lib.ink_layout import analyze_ink_layout_image, persist_ink_layout, render_ink_layout_heatmap
     from historical_ocr.pipeline.paths import page_ink_layout_png
 
     gutter, gap = layout_section_params(spec)
     ink = analyze_ink_layout_image(image, min_gutter_px=gutter, min_gap_px=gap)
-    if ink is None or not ink.sections:
-        return counts
+    if ink is None:
+        return counts, None
 
     counts.ink_columns = len(ink.columns)
     counts.ink_sections = len(ink.sections)
     persist_ink_layout(job_root, page_id, ink)
+    multi = "multi-column" if counts.ink_columns >= 2 else "single-column"
     if log_fn:
         log_fn(
-            f"ink-layout: {counts.ink_columns} column(s), "
+            f"ink-layout: {counts.ink_columns} column(s) [{multi}], "
             f"{counts.ink_sections} section(s) on {page_id}",
         )
-    if settings.symbol_glyph_heatmap and counts.ink_sections >= 2:
+    if settings.symbol_glyph_heatmap and (counts.ink_columns >= 2 or counts.ink_sections >= 2):
         render_ink_layout_heatmap(image, page_ink_layout_png(job_root, page_id), ink)
-    return counts
+    return counts, ink
 
 
 def postprocess_layout(

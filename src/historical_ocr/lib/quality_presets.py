@@ -57,6 +57,7 @@ def apply_quality_tier(
         "figure_extract_enabled": True,
         "damage_retry_enabled": True,
         "deskew_enabled": True,
+        "overlaid_ocr_enabled": True,
     }
 
     spot_llm = _spot_llm_flags(provider, api_key)

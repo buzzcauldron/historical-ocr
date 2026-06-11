@@ -86,6 +86,7 @@ def run_tesseract_backend(
     preprocess: dict,
     settings=None,
     print_spec: PrintDocumentTypeSpec | None = None,
+    ink_layout=None,
     log_fn=None,
 ) -> LayoutOcrResult:
     from historical_ocr.lib.layout_ocr import ocr_image_text_only, ocr_image_with_layout
@@ -106,7 +107,48 @@ def run_tesseract_backend(
     def _finish(result: LayoutOcrResult) -> LayoutOcrResult:
         return apply_confusables_to_result(result)
 
+    def _ink_multi_column() -> bool:
+        return ink_layout is not None and len(ink_layout.columns) >= 2
+
     def _run(path: Path) -> LayoutOcrResult:
+        # Priority: ink-zone overlaid → column OCR → TEI sections → full page.
+        if (
+            getattr(settings, "overlaid_ocr_enabled", False)
+            and ink_layout is not None
+            and use_layout
+        ):
+            from historical_ocr.lib.overlaid_ocr import ocr_image_overlaid
+
+            use_sections = len(ink_layout.sections) >= 2 and not _ink_multi_column()
+            overlaid_result = ocr_image_overlaid(
+                path,
+                ink_layout,
+                lang=lang,
+                psm=column_psm if _ink_multi_column() else section_psm,
+                settings=settings,
+                filter_opts=filter_opts,
+                use_sections=use_sections,
+                log_fn=log_fn,
+            )
+            if overlaid_result is not None:
+                return _finish(overlaid_result)
+
+        if column_ocr and _ink_multi_column():
+            from historical_ocr.lib.column_ocr import ocr_image_by_columns
+
+            column_result = ocr_image_by_columns(
+                path,
+                lang=lang,
+                psm=column_psm,
+                settings=settings,
+                filter_opts=filter_opts,
+                min_gutter_px=column_gutter,
+                ink_layout=ink_layout,
+                log_fn=log_fn,
+            )
+            if column_result is not None:
+                return _finish(column_result)
+
         if tei_section_ocr:
             from historical_ocr.lib.tei_sectioning import ocr_image_by_tei_sections
 
@@ -133,6 +175,7 @@ def run_tesseract_backend(
                 settings=settings,
                 filter_opts=filter_opts,
                 min_gutter_px=column_gutter,
+                ink_layout=ink_layout,
                 log_fn=log_fn,
             )
             if column_result is not None:
