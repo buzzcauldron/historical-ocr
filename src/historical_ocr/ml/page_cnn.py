@@ -111,6 +111,7 @@ def train_page_cnn(
     lr: float = 1e-3,
     image_size: int = 224,
     val_fraction: float = 0.2,
+    patience: int = 3,
     seed: int = 42,
     log_fn: Callable[[str], None] | None = None,
 ) -> PageCnnCheckpoint:
@@ -171,8 +172,11 @@ def train_page_cnn(
 
     best_acc = 0.0
     best_state = None
+    epochs_without_improve = 0
+    epochs_run = 0
 
     for epoch in range(1, epochs + 1):
+        epochs_run = epoch
         model.train()
         running_loss = 0.0
         for batch_x, batch_y in train_loader:
@@ -203,6 +207,18 @@ def train_page_cnn(
         if acc >= best_acc:
             best_acc = acc
             best_state = {k: v.detach().cpu() for k, v in model.state_dict().items()}
+            epochs_without_improve = 0
+        else:
+            epochs_without_improve += 1
+            if patience > 0 and epochs_without_improve >= patience:
+                _log(
+                    f"early stop at epoch {epoch} "
+                    f"(val_acc flat for {patience} epochs, best={best_acc:.3f})",
+                )
+                break
+
+    if best_state is None:
+        raise RuntimeError("training produced no checkpoint")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -211,6 +227,8 @@ def train_page_cnn(
         "image_size": image_size,
         "backbone": "resnet18",
         "val_accuracy": best_acc,
+        "epochs_run": epochs_run,
+        "early_stopped": epochs_run < epochs,
         "train_count": len(train_rows),
         "val_count": len(val_rows),
         "data_dir": str(data_dir.resolve()),

@@ -9,22 +9,11 @@ ROOT="${HISTORICAL_OCR_ROOT:-/ocean/projects/hum260002p/sstrickland/historical-o
 VENV="${HISTORICAL_OCR_VENV:-$ROOT/.venv}"
 
 export PYTHONNOUSERSITE=True
-# historical-ocr requires Python >= 3.11; default `module load python` on Bridges is 3.8.
-for mod in python3.11 python/3.11 python3 python anaconda3; do
-  module load "$mod" 2>/dev/null || true
-  if python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
-    break
-  fi
-done
-
-if ! command -v python3 >/dev/null; then
-  echo "ERROR: load Python >= 3.11 (e.g. module load python3.11)" >&2
-  exit 1
-fi
-if ! python3 -c 'import sys; assert sys.version_info >= (3, 11)' 2>/dev/null; then
-  echo "ERROR: need Python >= 3.11; got $(python3 --version)" >&2
-  exit 1
-fi
+# Lmod needs a login shell on some SSH sessions; preload before bridges_load_python.
+module purge 2>/dev/null || true
+module load anaconda3/2024.10-1 2>/dev/null || module load anaconda3 2>/dev/null || true
+# shellcheck disable=SC1091
+source "$(dirname "$0")/bridges_load_python.sh"
 
 echo "[venv] python: $(which python3) ($(python3 --version))"
 echo "[venv] target: $VENV"
@@ -39,7 +28,7 @@ if [[ -d "$VENV" ]]; then
 fi
 
 if [[ ! -x "$VENV/bin/python" ]]; then
-  python3 -m venv "$VENV"
+  "${BRIDGES_PYTHON3:-python3}" -m venv "$VENV"
 fi
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"

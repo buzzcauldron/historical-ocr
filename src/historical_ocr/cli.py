@@ -186,6 +186,7 @@ def cmd_cnn_train(args: argparse.Namespace) -> int:
         batch_size=args.batch_size,
         lr=args.lr,
         image_size=args.image_size,
+        patience=args.patience,
         log_fn=lambda m: print(m, file=sys.stderr),
     )
     print(out)
@@ -536,6 +537,12 @@ def build_parser() -> argparse.ArgumentParser:
     cnn_train.add_argument("--batch-size", type=int, default=16)
     cnn_train.add_argument("--lr", type=float, default=1e-3)
     cnn_train.add_argument("--image-size", type=int, default=224)
+    cnn_train.add_argument(
+        "--patience",
+        type=int,
+        default=3,
+        help="Stop when val accuracy fails to improve for N epochs (0 = run all epochs)",
+    )
     cnn_train.add_argument(
         "--extra-data",
         action="append",

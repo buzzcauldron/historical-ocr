@@ -3,7 +3,7 @@
 #SBATCH -p GPU-shared
 #SBATCH --gres=gpu:v100-32:1
 #SBATCH -N 1
-#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks-per-node=5
 #SBATCH -t 02:00:00
 #SBATCH -A hum260002p
 #SBATCH -o %x-%j.out
@@ -14,7 +14,8 @@ DATA="${PAGE_CNN_DATA:-$ROOT/data/page_cnn}"
 OUT="${PAGE_CNN_MODEL:-$ROOT/models/page_cnn.pt}"
 VENV="${HISTORICAL_OCR_VENV:-$ROOT/.venv}"
 
-module load python3.11 2>/dev/null || module load python/3.11 2>/dev/null || module load python3 2>/dev/null || true
+# shellcheck disable=SC1091
+source "$ROOT/scripts/bridges_load_python.sh"
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -36,6 +37,7 @@ historical-ocr cnn train \
   --data "$DATA" \
   --out "$OUT" \
   --epochs "${PAGE_CNN_EPOCHS:-25}" \
+  --patience "${PAGE_CNN_PATIENCE:-3}" \
   --batch-size "${PAGE_CNN_BATCH:-32}" \
   --image-size "${PAGE_CNN_SIZE:-224}"
 

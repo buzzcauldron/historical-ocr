@@ -29,7 +29,10 @@ echo "[bridges] sync $REPO -> $DTN:$DEST"
 bash "$REPO/scripts/sync_to_bridges.sh"
 
 echo "[bridges] setup venv on login node (idempotent)"
-ssh -o BatchMode=yes "$LOGIN" "cd '$DEST' && bash scripts/setup_bridges_venv.sh"
+ssh -o BatchMode=yes "$LOGIN" "bash -lc 'cd \"$DEST\" && bash scripts/setup_bridges_venv.sh'"
+
+echo "[bridges] verify venv"
+ssh -o BatchMode=yes "$LOGIN" "bash -lc 'cd \"$DEST\" && source .venv/bin/activate && historical-ocr --version && python -c \"import torch; print(torch.__version__)\"'"
 
 REMOTE_ENV="cd '$DEST'"
 [[ -n "${PAGE_CNN_LIMIT:-}" ]] && REMOTE_ENV="$REMOTE_ENV && export PAGE_CNN_LIMIT='$PAGE_CNN_LIMIT'"
@@ -38,7 +41,7 @@ REMOTE_ENV="cd '$DEST'"
 
 if [[ "$TRAIN_ONLY" -eq 0 ]]; then
   echo "[bridges] submit fetch job (RM-shared, up to 6h)"
-  FETCH_JOB=$(ssh -o BatchMode=yes "$LOGIN" "$REMOTE_ENV && sbatch --parsable scripts/bridges_fetch_page_cnn.sbatch")
+  FETCH_JOB=$(ssh -o BatchMode=yes "$LOGIN" "bash -lc '$REMOTE_ENV && sbatch --parsable scripts/bridges_fetch_page_cnn.sbatch'")
   echo "[bridges] fetch job: $FETCH_JOB"
 fi
 
@@ -49,10 +52,19 @@ fi
 
 if [[ "$TRAIN_ONLY" -eq 1 ]]; then
   echo "[bridges] submit train job (no fetch dependency)"
-  TRAIN_JOB=$(ssh -o BatchMode=yes "$LOGIN" "$REMOTE_ENV && sbatch --parsable scripts/bridges_train_page_cnn.sbatch")
+  TRAIN_JOB=$(ssh -o BatchMode=yes "$LOGIN" "bash -lc '$REMOTE_ENV && sbatch --parsable scripts/bridges_train_page_cnn.sbatch'")
 else
   echo "[bridges] submit train job after fetch completes"
-  TRAIN_JOB=$(ssh -o BatchMode=yes "$LOGIN" "$REMOTE_ENV && sbatch --parsable --dependency=afterok:$FETCH_JOB scripts/bridges_train_page_cnn.sbatch")
+  TRAIN_JOB=$(ssh -o BatchMode=yes "$LOGIN" "bash -lc '$REMOTE_ENV && sbatch --parsable --dependency=afterok:$FETCH_JOB scripts/bridges_train_page_cnn.sbatch'")
+fi
+
+if [[ "$TRAIN_ONLY" -eq 0 && -z "${FETCH_JOB:-}" ]]; then
+  echo "[bridges] ERROR: fetch sbatch returned empty job id" >&2
+  exit 1
+fi
+if [[ "$FETCH_ONLY" -eq 0 && -z "${TRAIN_JOB:-}" ]]; then
+  echo "[bridges] ERROR: train sbatch returned empty job id" >&2
+  exit 1
 fi
 
 echo "[bridges] train job: $TRAIN_JOB"

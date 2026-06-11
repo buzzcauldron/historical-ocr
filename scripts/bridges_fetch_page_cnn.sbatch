@@ -1,8 +1,9 @@
 #!/bin/bash
 #SBATCH -J page-cnn-fetch
-#SBATCH -p RM-shared
+#SBATCH -p GPU-shared
+#SBATCH --gres=gpu:v100-32:1
 #SBATCH -N 1
-#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks-per-node=5
 #SBATCH -t 06:00:00
 #SBATCH -A hum260002p
 #SBATCH -o %x-%j.out
@@ -13,10 +14,12 @@ ROOT="${HISTORICAL_OCR_ROOT:-/ocean/projects/hum260002p/sstrickland/historical-o
 DATA="${PAGE_CNN_DATA:-$ROOT/data/page_cnn}"
 VENV="${HISTORICAL_OCR_VENV:-$ROOT/.venv}"
 
-module load python3.11 2>/dev/null || module load python/3.11 2>/dev/null || module load python3 2>/dev/null || true
+# shellcheck disable=SC1091
+source "$ROOT/scripts/bridges_load_python.sh"
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
 cd "$ROOT"
+mkdir -p "$DATA/print" "$DATA/manuscript"
 
 LIMIT_ARGS=()
 if [[ -n "${PAGE_CNN_LIMIT:-}" ]]; then
@@ -45,5 +48,11 @@ if [[ -d "$AKDENIZ_GT/kraken-vatlib-gt" ]]; then
     --extra "manuscript:$AKDENIZ_GT/kraken-vatlib-gt"
 fi
 
-python scripts/fetch_page_cnn_data.py --list
+N_MS=$(find "$DATA/manuscript" -type f 2>/dev/null | wc -l)
+if [[ "$N_MS" -lt 4 ]]; then
+  echo "[fetch] manuscript=$N_MS — bootstrapping IIIF seeds"
+  python scripts/bootstrap_page_cnn_data.py --out "$DATA"
+fi
+
+python scripts/fetch_page_cnn_data.py --list || true
 echo "[fetch] print=$(find "$DATA/print" -type f 2>/dev/null | wc -l) manuscript=$(find "$DATA/manuscript" -type f 2>/dev/null | wc -l)"

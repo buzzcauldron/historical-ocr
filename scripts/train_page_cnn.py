@@ -22,6 +22,12 @@ def main() -> int:
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--image-size", type=int, default=224)
     ap.add_argument(
+        "--patience",
+        type=int,
+        default=3,
+        help="Stop when val accuracy fails to improve for N epochs (0 = disabled)",
+    )
+    ap.add_argument(
         "--extra-data",
         action="append",
         type=Path,
@@ -44,6 +50,7 @@ def main() -> int:
         batch_size=args.batch_size,
         lr=args.lr,
         image_size=args.image_size,
+        patience=args.patience,
         log_fn=print,
     )
     print(f"done: {meta.path}  val_acc={meta.val_accuracy}")

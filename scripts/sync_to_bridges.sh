@@ -11,7 +11,7 @@ rsync -avz --delete \
   --exclude '.venv/' \
   --exclude 'jobs/' \
   --exclude 'data/' \
-  --exclude 'models/' \
+  --exclude '/models/' \
   --exclude '.git/' \
   --exclude '__pycache__/' \
   --exclude '.pytest_cache/' \
