@@ -67,6 +67,8 @@ jobs/<job_id>/
       txt/ xml/ tei/ corpus.jsonl
   ocr/*.txt              # raw print OCR (internal)
   clean/*.txt            # Underwood-normalized (internal)
+  *.review.png           # optional glyph-machina heatmap for problem pages
+  *.review.json          # glyph-machina metadata for dropped/low-confidence glyphs
 ```
 
 ## Desktop GUI
