@@ -20,7 +20,7 @@ class SourceRecord(BaseModel):
 class PageRecord(BaseModel):
     page_id: str
     image_path: str
-    route: PageRoute = "manuscript"
+    route: PageRoute = "print"
     status: PageStatus = "pending"
     transcription_yaml: str | None = None
     transcription_txt: str | None = None
@@ -31,6 +31,7 @@ class PageRecord(BaseModel):
     pagexml_path: str | None = None
     print_doc_type: str | None = None
     fingerprint_score: float | None = None
+    routing_hints: list[str] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
 
 
@@ -50,8 +51,8 @@ class JobManifest(BaseModel):
         description="Stem of the submitted source file; names production exports.",
     )
     sources: list[SourceRecord] = Field(default_factory=list)
-    material_mode: Literal["auto", "manuscript", "print"] = "auto"
-    resolved_material: Literal["manuscript", "print", "mixed"] | None = None
+    material_mode: Literal["print"] = "print"
+    resolved_material: Literal["print"] | None = None
     fingerprint: FingerprintSummary | None = None
     print_doc_type: str | None = None
     print_ocr_combination: str | None = None

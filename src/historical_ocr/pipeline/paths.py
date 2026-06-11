@@ -9,6 +9,14 @@ def page_layout_json(job_root: Path, page_id: str) -> Path:
     return (job_root / "artifacts" / page_id / "layout.json").resolve()
 
 
+def page_ink_layout_json(job_root: Path, page_id: str) -> Path:
+    return (job_root / "artifacts" / page_id / "ink_layout.json").resolve()
+
+
+def page_ink_layout_png(job_root: Path, page_id: str) -> Path:
+    return (job_root / "artifacts" / page_id / "ink_layout.png").resolve()
+
+
 def page_glyph_decisions_path(job_root: Path, page_id: str) -> Path:
     from historical_ocr.lib.glyph_heatmap import page_glyph_decisions_path as _path
 

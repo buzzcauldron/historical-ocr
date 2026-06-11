@@ -41,6 +41,27 @@ def available() -> bool:
     return _ensure_importable() or shutil.which("ocr-cleanup") is not None
 
 
+def _cleaner_kwargs(
+    llm: str,
+    *,
+    model: str | None,
+    anthropic_api_key: str | None,
+    google_api_key: str | None,
+    openai_api_key: str | None,
+) -> dict:
+    kw: dict = {}
+    if model:
+        kw["model"] = model
+    provider = llm.lower()
+    if provider == "gemini" and google_api_key:
+        kw["api_key"] = google_api_key
+    elif provider == "anthropic" and anthropic_api_key:
+        kw["api_key"] = anthropic_api_key
+    elif provider == "openai" and openai_api_key:
+        kw["api_key"] = openai_api_key
+    return kw
+
+
 def clean_text(
     text: str,
     *,
@@ -49,6 +70,9 @@ def clean_text(
     apply_corrections: bool = True,
     llm: str | None = None,
     model: str | None = None,
+    anthropic_api_key: str | None = None,
+    google_api_key: str | None = None,
+    openai_api_key: str | None = None,
 ) -> str:
     """Rule-based (and optional LLM) cleanup for English print OCR."""
     if _ensure_importable():
@@ -62,8 +86,14 @@ def clean_text(
 
         cleaner = None
         if llm and llm != "none":
-            kw = {"model": model} if model else {}
-            cleaner = get_cleaner(llm, **{k: v for k, v in kw.items() if v})
+            kw = _cleaner_kwargs(
+                llm,
+                model=model,
+                anthropic_api_key=anthropic_api_key,
+                google_api_key=google_api_key,
+                openai_api_key=openai_api_key,
+            )
+            cleaner = get_cleaner(llm, **kw)
 
         result = CleanupPipeline(
             rules=rs,

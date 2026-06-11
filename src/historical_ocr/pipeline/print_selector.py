@@ -11,14 +11,13 @@ from historical_ocr.config import Settings
 from historical_ocr.document_types.print_types import PrintDocumentTypeSpec
 from historical_ocr.lib.layout_ocr import LayoutOcrResult
 
-PrintOcrBackend = Literal["tesseract", "pdf_text", "shell"]
+PrintOcrBackend = Literal["tesseract", "pdf_text"]
 
 
 class PrintPlanKind(str, Enum):
     TESSERACT_ONLY = "tesseract_only"
     PDF_TEXT_FIRST = "pdf_text_first"
     TESSERACT_THEN_CLEAN = "tesseract_then_clean"
-    SHELL_PRINT = "shell_print"
 
 
 @dataclass(frozen=True)
@@ -40,8 +39,9 @@ def _effective_combination(settings: Settings, spec: PrintDocumentTypeSpec | Non
         "ocr_only": "tesseract_only",
         "clean": "tesseract_then_clean",
         "underwood": "tesseract_then_clean",
-        "shell": "shell_print",
-        "transcription_shell": "shell_print",
+        "shell": "tesseract_then_clean",
+        "shell_print": "tesseract_then_clean",
+        "transcription_shell": "tesseract_then_clean",
     }
     return aliases.get(raw, raw)
 
@@ -50,20 +50,9 @@ def plan_print_execution(
     settings: Settings,
     spec: PrintDocumentTypeSpec | None,
     *,
-    shell_available: bool,
     pdf_available: bool,
 ) -> PrintExecutionPlan:
     combo = _effective_combination(settings, spec)
-
-    if combo == "shell_print":
-        if shell_available and spec and spec.shell_doc_type:
-            return PrintExecutionPlan(
-                kind=PrintPlanKind.SHELL_PRINT,
-                backends=("shell",),
-                run_clean=False,
-                spec=spec,
-            )
-        combo = "tesseract_then_clean"
 
     if combo == "pdf_text_first" and pdf_available:
         return PrintExecutionPlan(
@@ -97,22 +86,65 @@ def run_tesseract_backend(
     preprocess: dict,
     settings=None,
     print_spec: PrintDocumentTypeSpec | None = None,
+    log_fn=None,
 ) -> LayoutOcrResult:
     from historical_ocr.lib.layout_ocr import ocr_image_text_only, ocr_image_with_layout
+    from historical_ocr.lib.ocr_confusables import apply_confusables_to_result
     from historical_ocr.lib.symbol_filter import resolve_symbol_filter
     from historical_ocr.ocr.preprocess import preprocess_for_ocr
 
     filter_opts = resolve_symbol_filter(settings, print_spec) if settings else None
     use_layout = settings is None or getattr(settings, "save_layout_artifacts", True)
     ocr_fn = ocr_image_with_layout if use_layout else ocr_image_text_only
+    tei_section_ocr = bool(print_spec and print_spec.tei_section_ocr and use_layout)
+    column_ocr = bool(print_spec and print_spec.column_ocr and use_layout)
+    section_psm = print_spec.tei_section_psm if print_spec else 6
+    section_gap = print_spec.tei_section_min_gap_px if print_spec else 18
+    column_psm = print_spec.column_ocr_psm if print_spec else 6
+    column_gutter = print_spec.column_ocr_min_gutter_px if print_spec else 14
+
+    def _finish(result: LayoutOcrResult) -> LayoutOcrResult:
+        return apply_confusables_to_result(result)
 
     def _run(path: Path) -> LayoutOcrResult:
-        return ocr_fn(
-            path,
-            lang=lang,
-            psm=psm,
-            settings=settings,
-            filter_opts=filter_opts,
+        if tei_section_ocr:
+            from historical_ocr.lib.tei_sectioning import ocr_image_by_tei_sections
+
+            section_result = ocr_image_by_tei_sections(
+                path,
+                lang=lang,
+                psm=section_psm,
+                settings=settings,
+                filter_opts=filter_opts,
+                min_gutter_px=column_gutter,
+                min_gap_px=section_gap,
+                log_fn=log_fn,
+            )
+            if section_result is not None:
+                return _finish(section_result)
+
+        if column_ocr:
+            from historical_ocr.lib.column_ocr import ocr_image_by_columns
+
+            column_result = ocr_image_by_columns(
+                path,
+                lang=lang,
+                psm=column_psm,
+                settings=settings,
+                filter_opts=filter_opts,
+                min_gutter_px=column_gutter,
+                log_fn=log_fn,
+            )
+            if column_result is not None:
+                return _finish(column_result)
+        return _finish(
+            ocr_fn(
+                path,
+                lang=lang,
+                psm=psm,
+                settings=settings,
+                filter_opts=filter_opts,
+            ),
         )
 
     if preprocess:

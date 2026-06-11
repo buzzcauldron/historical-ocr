@@ -8,7 +8,7 @@ python3 -m venv "$VENV"
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
 pip install -U pip
-pip install -e "$ROOT[all]"
+pip install -e "$ROOT[figures]"
 
 # System Tesseract (print OCR engine)
 if command -v tesseract >/dev/null 2>&1; then
@@ -36,6 +36,16 @@ if [[ -d "$PROJECTS/ocr-cleanup" ]]; then
 else
   echo "→ note: ../ocr-cleanup not found — print --clean will be skipped"
   echo "  Clone DataMunging fork or: git clone <ocr-cleanup-url> $PROJECTS/ocr-cleanup"
+fi
+
+if [[ -d "$PROJECTS/manuscript-fingerprint" ]]; then
+  echo "→ editable: typebox-fingerprinter (deskew + type-case routing)"
+  pip install -e "$PROJECTS/manuscript-fingerprint"
+elif [[ -d "$PROJECTS/typebox-fingerprinter" ]]; then
+  echo "→ editable: typebox-fingerprinter"
+  pip install -e "$PROJECTS/typebox-fingerprinter"
+else
+  echo "→ note: ../manuscript-fingerprint not found — deskew uses projection fallback"
 fi
 
 if [[ -d "$PROJECTS/bib-ocr" ]]; then

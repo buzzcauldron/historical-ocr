@@ -83,6 +83,62 @@ Env: `HISTORICAL_OCR_SYMBOL_FILTER=0`, `HISTORICAL_OCR_SYMBOL_GLYPH_HEATMAP=0`, 
 
 Per doc-type override in YAML: `ocr.char_blacklist: "|_"` (see `twentieth_century.yaml`).
 
+## LLM-independent path (default for print)
+
+Print OCR **does not require any LLM or API key**. The production path is:
+
+1. **Tesseract** layout OCR (era-aware doc type from `--publication-year`)
+2. **Symbol / glyph filter** — drop column rules, damage marks, orphan lines (`1`, `l`, `@`, …)
+3. **Underwood rules** (`ocr-cleanup`) — hyphen rejoin, long-s, spelling corrections
+4. **Post-clean sanitize** — second orphan-line pass after rules
+
+```bash
+# Low latency (recommended for batches): rules + clean, no glyph crops / review PNG
+historical-ocr run job -i scan.tif --mode print --publication-year 1970 --low-latency
+
+# Full rules-only with glyph review companions (~1s slower per page)
+historical-ocr run job -i scan.tif --mode print --rules-only
+
+# Fastest (~4–5s/page): raw Tesseract only, no clean
+historical-ocr run job -i scan.tif --mode print --fast --no-clean
+```
+
+| Flag | ~BlackNews/page | Keeps |
+|------|-----------------|-------|
+| `--low-latency` | **~5 s** | Underwood clean, blacklist, orphan-line drop |
+| `--rules-only` | **~6 s** | + glyph classify + `.review.png` |
+| `--fast --no-clean` | **~4.5 s** | Raw OCR only |
+| LLM clean | **~60 s** | Not recommended for batches |
+
+Benchmark against scraped newspaper GT (Chronicling America, no LLM):
+
+```bash
+historical-ocr gt fetch --limit 200 --val-ratio 0.1
+historical-ocr gt eval --gt-dir data/newspaper_gt --split val --limit 20
+```
+
+## Human corrections → tune rules
+
+Submit edited text to learn replacements (no LLM):
+
+```bash
+# 1. Run OCR
+historical-ocr run myjob -i scan.tif --mode print --low-latency
+
+# 2. Copy export for editing
+historical-ocr gt template myjob
+# edit jobs/myjob/export/scan.corrected.txt
+
+# 3. Import + mine rules
+historical-ocr gt submit --job myjob
+historical-ocr gt tune
+
+# 4. Next runs apply data/user_gt/tuned_rules.json automatically
+#    (or HISTORICAL_OCR_TUNE_RULES=/path/to/tuned_rules.json)
+```
+
+Evaluate tuned OCR against your corrections: `historical-ocr gt eval --gt-dir data/user_gt --split val`.
+
 ## OCR combinations
 
 | Mode | Behavior |

@@ -21,6 +21,7 @@ class MarkKind(str, Enum):
     RULE = "rule"
     SYMBOL = "symbol"
     DAMAGE = "damage"
+    STRANGE_LETTER = "strange_letter"
     UNKNOWN = "unknown"
 
 
@@ -147,12 +148,19 @@ def measure_crop(crop_gray, *, line_median_h: float) -> GlyphMetrics | None:
 
 def classify_metrics(metrics: GlyphMetrics, *, text: str, conf: float) -> GlyphDecision:
     """Map glyph metrics + OCR token to a keep/drop decision."""
+    token = text.strip()
     h = metrics.height
     w = metrics.width
     fill = metrics.fill_ratio
     aspect = metrics.aspect
     tall = h / max(w, 1)
     line_h = max(metrics.line_median_h, 1.0)
+
+    if len(token) == 1:
+        if token.isdigit():
+            return GlyphDecision(MarkKind.DAMAGE, False, "lone_digit", metrics)
+        if token in "@_":
+            return GlyphDecision(MarkKind.SYMBOL, False, "lone_symbol", metrics)
 
     # Column / table rules — tall narrow strokes (solid or faint).
     if w <= max(4, line_h * 0.15) and h >= line_h * 1.2 and tall >= 2.5:
@@ -212,6 +220,28 @@ def classify_bbox(
     return GlyphDecision(MarkKind.UNKNOWN, conf >= 60, "bbox_fallback", None)
 
 
+def _apply_font_check(
+    decision: GlyphDecision,
+    *,
+    text: str,
+    conf: float,
+    font_profile=None,
+) -> GlyphDecision:
+    if font_profile is None:
+        return decision
+    from historical_ocr.lib.historical_fonts import analyze_token_for_font
+
+    finding = analyze_token_for_font(text, font_profile, conf=conf)
+    if finding is None or not finding.anomalous:
+        return decision
+    return GlyphDecision(
+        MarkKind.STRANGE_LETTER,
+        finding.keep,
+        finding.reason,
+        decision.metrics,
+    )
+
+
 def classify_token(
     *,
     text: str,
@@ -222,6 +252,7 @@ def classify_token(
     height: int,
     line_median_h: float,
     page_gray=None,
+    font_profile=None,
 ) -> GlyphDecision:
     if page_gray is not None and np is not None and width > 0 and height > 0:
         arr = np.asarray(page_gray, dtype=np.uint8)
@@ -234,15 +265,22 @@ def classify_token(
             crop = arr[y0:y1, x0:x1]
             metrics = measure_crop(crop, line_median_h=line_median_h)
             if metrics is not None:
-                return classify_metrics(metrics, text=text, conf=conf)
+                decision = classify_metrics(metrics, text=text, conf=conf)
+                return _apply_font_check(
+                    decision,
+                    text=text,
+                    conf=conf,
+                    font_profile=font_profile,
+                )
 
-    return classify_bbox(
+    decision = classify_bbox(
         width=width,
         height=height,
         text=text,
         conf=conf,
         line_median_h=line_median_h,
     )
+    return _apply_font_check(decision, text=text, conf=conf, font_profile=font_profile)
 
 
 def line_median_heights(data: dict) -> dict[tuple[int, int, int], float]:

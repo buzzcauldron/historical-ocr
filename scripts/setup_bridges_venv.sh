@@ -35,7 +35,7 @@ source "$VENV/bin/activate"
 
 python -m pip install -U pip setuptools wheel
 python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
-pip install -e "$ROOT[ml,pdf,print]"
+pip install -e "$ROOT[figures]"
 
 python -c "import torch; from historical_ocr.ml.page_cnn import torch_available; print('torch', torch.__version__, 'cuda', torch.cuda.is_available(), 'ml', torch_available())"
 historical-ocr --version

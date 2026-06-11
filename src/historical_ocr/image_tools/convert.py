@@ -216,6 +216,9 @@ def normalize_page_image(
     force: bool = False,
     use_cucim: bool = False,
     optimize: bool = True,
+    deskew: bool = False,
+    deskew_max_angle: float = 15.0,
+    deskew_min_angle: float = 0.25,
 ) -> ImageNormalizeMeta:
     """Resize/convert a page image for pipeline ingest. Returns size metadata."""
     dst = dst.with_suffix(".jpg" if fmt == "jpeg" else ".png")
@@ -263,8 +266,17 @@ def normalize_page_image(
         )
 
     with Image.open(src) as opened:
+        working = opened
+        if deskew:
+            from historical_ocr.image_tools.deskew import deskew_image
+
+            working, _meta = deskew_image(
+                opened.convert("RGB"),
+                max_angle=deskew_max_angle,
+                min_abs_angle=deskew_min_angle,
+            )
         img, orig_size = _prepare_and_resize(
-            opened,
+            working,
             fmt=fmt,
             max_width=max_width,
             max_height=max_height,

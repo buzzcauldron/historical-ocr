@@ -33,8 +33,6 @@ def print_job_export() -> dict:
             "_pytest_print",
             "-i",
             str(FIXTURE_PDF),
-            "--mode",
-            "print",
             "--no-clean",
         ],
         cwd=ROOT,

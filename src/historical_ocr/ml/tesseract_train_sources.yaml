@@ -1,0 +1,120 @@
+# Hugging Face + local corpora for Tesseract LSTM fine-tuning (tesstrain line GT).
+# Fetch: historical-ocr tess fetch --source <id>
+version: 1
+
+huggingface:
+  chronicling-america:
+    repo: RevolutionCrossroads/loc_chronicling_america_1770-1810
+    kind: chronicling_parquet
+    default_limit: 5000
+    start_model: eng
+    print_doc_type: enlightenment_antiqua
+    notes: "LOC 1770–1810 newspapers (page + ocr_text parquet)."
+
+  chronicling-america-1920s:
+    repo: davanstrien/chronicling-america-1920-1950
+    kind: hf_image_text
+    image_field: image
+    text_field: text
+    default_limit: 2000
+    start_model: eng
+    print_doc_type: twentieth_century
+    notes: "20th-c. Chronicling America sample pages."
+
+  newspaper-ocr-gold:
+    repo: NealCaren/newspaper-ocr-gold
+    kind: hf_image_text
+    split: train
+    image_field: image
+    text_field: transcription
+    default_limit: 5000
+    start_model: eng
+    print_doc_type: nineteenth_century
+    notes: "Line-level gold pairs (~51k train); ideal tesstrain GT — no page line extraction needed."
+
+  newspaper-ocr:
+    repo: NealCaren/newspaper-ocr
+    kind: hf_image_text
+    image_field: image
+    text_field: text
+    default_limit: 3000
+    start_model: eng
+    print_doc_type: nineteenth_century
+    notes: "Large newspaper OCR corpus (noisy + gold mixes)."
+
+  ocr-quality:
+    repo: Aslan-mingye/OCR-Quality
+    split: train
+    kind: hf_image_text
+    image_field: image
+    text_field: text
+    default_limit: 2000
+    start_model: eng
+    print_doc_type: modern_historical
+    notes: "300 DPI print PDF pages — modern historical English."
+
+  ocr-pdf-degraded:
+    repo: racineai/ocr-pdf-degraded
+    split: train
+    kind: hf_image_text
+    image_field: image
+    text_field: text
+    default_limit: 3000
+    start_model: eng
+    print_doc_type: modern_historical
+    notes: "Synthetically degraded print (~25k pages)."
+
+  institutional-books:
+    repo: institutional/institutional-books-1.0-metadata
+    repo_full: institutional/institutional-books-1.0
+    kind: metadata_only
+    tesstrain: false
+    default_limit: 5000
+    start_model: eng
+    print_doc_type: nineteenth_century
+    filters:
+      language_gen: eng
+      min_ocr_score_src: 70
+      min_ocr_score_gen: 70
+      min_year: 1800
+      max_year: 1920
+      exclude_likely_duplicates: true
+    notes: >
+      Harvard Google Books (paper 2506.08300). Page scans via Internet Archive IIIF
+      (--archive-org); HF metadata filters volumes; optional HF text_by_page GT.
+      IA match: HTID hvd.*, OCLC, LCCN, title/year.
+
+local:
+  newspaper_gt:
+    path: data/newspaper_gt
+    kind: page_corpus
+    default_limit: 10000
+    start_model: eng
+    print_doc_type: enlightenment_antiqua
+    notes: "Local Chronicling America fetch (images + text/)."
+
+  user_gt:
+    path: data/user_gt
+    kind: page_corpus
+    default_limit: 10000
+    start_model: eng
+    print_doc_type: twentieth_century
+    notes: "Human-corrected pages (use text/ not raw/)."
+
+training:
+  model_name: histnews
+  start_model: eng
+  max_iterations: 10000
+  ratio_train: 0.9
+
+# Pre-1800 print OCR (GT4HistOCR + PAGE-XML) — corpus prep lives in transcription-shell.
+# Train via transcription-shell/scripts/train_tesseract_pre1800.sh (delegates here).
+pre1800:
+  model_name: lat_pre1800
+  start_model: Fraktur
+  max_iterations: 100000
+  ratio_train: 0.99
+  notes: >
+    Fine-tune script/Fraktur on GT4HistOCR (Kallimachos, EarlyModernLatin, RIDGES-Fraktur,
+    incunabula) plus OCR-D and CREMMA early-modern PAGE-XML. Prepare with
+    transcription-shell/scripts/prepare_tesseract_ocr_corpus.py --profile pre1800.

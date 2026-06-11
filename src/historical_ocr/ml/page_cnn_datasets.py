@@ -19,7 +19,7 @@ _IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".bmp"}
 class SourceSpec:
     source_id: str
     label: MaterialLabel
-    kind: Literal["huggingface", "ocrdatasets", "remote_gt", "local"]
+    kind: Literal["huggingface", "ocrdatasets", "remote_gt", "newspaper_gt", "local"]
     default_limit: int
     notes: str = ""
 
@@ -38,7 +38,7 @@ def load_registry() -> dict[str, Any]:
 def list_sources() -> list[SourceSpec]:
     reg = load_registry()
     rows: list[SourceSpec] = []
-    for kind in ("huggingface", "ocrdatasets", "remote_gt"):
+    for kind in ("huggingface", "ocrdatasets", "newspaper_gt", "remote_gt"):
         block = reg.get(kind) or {}
         for source_id, raw in block.items():
             rows.append(
@@ -266,6 +266,73 @@ def harvest_ocrdatasets(
     )
 
 
+def harvest_newspaper_gt(
+    source_id: str,
+    out_root: Path,
+    newspaper_gt_dir: Path,
+    *,
+    limit: int | None = None,
+    log_fn: Callable[[str], None] | None = None,
+) -> int:
+    from historical_ocr.ml.newspaper_gt import load_manifest
+
+    reg = load_registry()
+    raw = (reg.get("newspaper_gt") or {}).get(source_id)
+    if not raw:
+        raise ValueError(f"unknown newspaper_gt source: {source_id}")
+
+    corpus = newspaper_gt_dir.expanduser().resolve()
+    manifest_path = corpus / "manifest.json"
+    if not manifest_path.is_file():
+        raise FileNotFoundError(
+            f"missing {manifest_path} — run: historical-ocr gt fetch --out {corpus}",
+        )
+
+    label: MaterialLabel = raw["label"]
+    cap = limit if limit is not None else int(raw.get("default_limit", 2000))
+    dest_dir = out_root / label
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    page_manifest = _load_manifest(out_root)
+    prefix = f"{source_id}_"
+
+    def _log(msg: str) -> None:
+        if log_fn:
+            log_fn(msg)
+
+    seen_dest = {p.name for p in dest_dir.glob(f"{prefix}*")}
+    manifest = load_manifest(corpus)
+    n = 0
+    for record_id, rec in sorted((manifest.get("records") or {}).items()):
+        if n >= cap:
+            break
+        image_rel = rec.get("image")
+        if not image_rel:
+            continue
+        src = corpus / str(image_rel)
+        if not src.is_file() or not _valid_image(src):
+            continue
+        name = f"{prefix}{n:06d}{src.suffix.lower()}"
+        if name in seen_dest:
+            n += 1
+            continue
+        dest = dest_dir / name
+        shutil.copy2(src, dest)
+        seen_dest.add(name)
+        n += 1
+
+    page_manifest["sources"][source_id] = {
+        "kind": "newspaper_gt",
+        "label": label,
+        "fetched": n,
+        "limit": cap,
+        "corpus": str(corpus),
+        "at": _now_iso(),
+    }
+    _save_manifest(out_root, page_manifest)
+    _log(f"{source_id}: copied {n} newspaper pages → {dest_dir}")
+    return n
+
+
 def harvest_akdeniz_gt(
     source_id: str,
     out_root: Path,
@@ -323,6 +390,8 @@ def fetch_sources(
     *,
     hf_sources: list[str] | None = None,
     ocrdatasets_sources: list[str] | None = None,
+    newspaper_gt_sources: list[str] | None = None,
+    newspaper_gt_dir: Path | None = None,
     remote_gt_sources: list[str] | None = None,
     ocrdatasets_root: Path | None = None,
     akdeniz_home: Path | None = None,
@@ -362,6 +431,19 @@ def fetch_sources(
             sid,
             out_root,
             ocrdatasets_root,
+            limit=per_limit,
+            log_fn=log_fn,
+        )
+
+    paper_block = reg.get("newspaper_gt") or {}
+    for sid in newspaper_gt_sources or []:
+        if not newspaper_gt_dir:
+            raise ValueError(f"--newspaper-gt required for {sid}")
+        per_limit = limit or int(paper_block[sid].get("default_limit", 2000))
+        counts[sid] = harvest_newspaper_gt(
+            sid,
+            out_root,
+            newspaper_gt_dir,
             limit=per_limit,
             log_fn=log_fn,
         )

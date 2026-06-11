@@ -47,10 +47,28 @@ def scan_pdf(
 
 
 def suggested_material(scan_job: Path) -> str:
-    fp_json = scan_job / "fingerprints.json"
-    if not fp_json.is_file():
+    from historical_ocr.lib.type_routing import load_fingerprint_summary
+
+    summary = load_fingerprint_summary(scan_job)
+    if summary is None:
         return "unknown"
-    data = json.loads(fp_json.read_text(encoding="utf-8"))
-    if data:
-        return "print"
-    return "unknown"
+    return summary.suggested_material
+
+
+def load_summary(scan_job: Path):
+    from historical_ocr.lib.type_routing import load_fingerprint_summary
+
+    return load_fingerprint_summary(scan_job)
+
+
+def deskew_scan_pages(scan_job: Path, *, in_place: bool = True) -> int:
+    """Deskew rasterized pages under scan_job/01_pages (typebox-fingerprinter layout)."""
+    try:
+        from manuscript_fingerprint.deskew import deskew_job_pages
+    except ImportError as exc:
+        raise RuntimeError(
+            "deskew requires typebox-fingerprinter: pip install -e ../manuscript-fingerprint",
+        ) from exc
+
+    rows = deskew_job_pages(scan_job, in_place=in_place)
+    return sum(1 for _path, meta in rows if meta.applied)

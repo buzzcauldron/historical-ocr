@@ -14,6 +14,12 @@ ocr:
 
 layout:
   backend: tesseract
+  tei_section_ocr: true
+  tei_section_psm: 6
+  tei_section_min_gap_px: 18
+  column_ocr: true
+  column_ocr_psm: 6
+  column_ocr_min_gutter_px: 14
 
 ocr_combination: pdf_text_first
 

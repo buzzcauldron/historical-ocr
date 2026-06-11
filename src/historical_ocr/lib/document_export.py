@@ -69,30 +69,19 @@ def _tei_header(manifest: JobManifest, *, title: str) -> ET.Element:
 
 
 def _append_page_div(parent: ET.Element, sl: PageSlice) -> None:
+    from historical_ocr.lib.tei_layout import append_sectioned_page_content
+
     page_div = ET.SubElement(parent, f"{_T}div", type="page")
     page_div.set(_XML, sl.page_id)
     ET.SubElement(page_div, f"{_T}pb", n=sl.page_id)
 
     layout = sl.layout or text_to_layout_result(sl.text)
-    p = ET.SubElement(page_div, f"{_T}p")
-    for line in layout.lines:
-        if not line.text.strip():
-            continue
-        lb_id = f"lb_{sl.page_id}_{line.line_num}"
-        lb = ET.SubElement(
-            p,
-            f"{_T}lb",
-            {
-                "n": str(line.line_num),
-                _XML: lb_id,
-                "rend": "line",
-                "coord": f"{line.left},{line.top},{line.width},{line.height}",
-            },
-        )
-        lb.tail = line.text
+    append_sectioned_page_content(page_div, sl.page_id, layout)
 
 
 def _append_facsimile(text_el: ET.Element, slices: list[PageSlice]) -> None:
+    from historical_ocr.lib.tei_layout import append_sectioned_facsimile_zones
+
     fac = ET.SubElement(text_el, f"{_T}facsimile")
     for sl in slices:
         layout = sl.layout or text_to_layout_result(sl.text)
@@ -107,21 +96,24 @@ def _append_facsimile(text_el: ET.Element, slices: list[PageSlice]) -> None:
                 "lry": str(layout.page_height),
             },
         )
-        for line in layout.lines:
-            if not line.text.strip():
-                continue
-            ET.SubElement(
-                surface,
-                f"{_T}zone",
-                {
-                    "rendition": "textline",
-                    "ulx": str(line.left),
-                    "uly": str(line.top),
-                    "lrx": str(line.left + line.width),
-                    "lry": str(line.top + line.height),
-                    "corresp": f"#lb_{sl.page_id}_{line.line_num}",
-                },
-            )
+        if layout.sections:
+            append_sectioned_facsimile_zones(surface, sl.page_id, layout)
+        else:
+            for line in layout.lines:
+                if not line.text.strip():
+                    continue
+                ET.SubElement(
+                    surface,
+                    f"{_T}zone",
+                    {
+                        "rendition": "textline",
+                        "ulx": str(line.left),
+                        "uly": str(line.top),
+                        "lrx": str(line.left + line.width),
+                        "lry": str(line.top + line.height),
+                        "corresp": f"#lb_{sl.page_id}_{line.line_num}",
+                    },
+                )
 
 
 def write_document_tei(
@@ -170,6 +162,11 @@ def build_delivery_manifest(
         "print_language": manifest.print_language,
         "sources": [s.model_dump() for s in manifest.sources],
         "deliverables": deliverables,
+        "routing_hints": [
+            {"page_id": p.page_id, "hints": p.routing_hints}
+            for p in manifest.pages
+            if p.routing_hints
+        ],
     }
 
 

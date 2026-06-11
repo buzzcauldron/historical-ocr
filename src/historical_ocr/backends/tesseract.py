@@ -125,10 +125,45 @@ def configure(
         os.environ["TESSDATA_PREFIX"] = prefix
 
 
+def _install_finetune_tessdata(settings) -> Path | None:
+    """Copy fine-tuned traineddata into models/tessdata for TESSDATA_PREFIX."""
+    lang = getattr(settings, "tesseract_finetune_lang", None)
+    path = getattr(settings, "tesseract_finetune_path", None)
+    if not lang or not path:
+        return None
+    src = Path(path).expanduser()
+    if not src.is_file():
+        return None
+    dest_dir = src.parent / "tessdata"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / f"{lang}.traineddata"
+    if not dest.is_file() or dest.stat().st_mtime < src.stat().st_mtime:
+        shutil.copy2(src, dest)
+    return dest_dir
+
+
+def resolve_lang_bundle(lang_bundle: str, settings=None) -> str:
+    """Prepend fine-tuned lang when traineddata is installed."""
+    if settings is None:
+        return lang_bundle
+    lang = getattr(settings, "tesseract_finetune_lang", None)
+    path = getattr(settings, "tesseract_finetune_path", None)
+    if not lang or not path or not Path(path).expanduser().is_file():
+        return lang_bundle
+    parts = [p.strip() for p in lang_bundle.split("+") if p.strip()]
+    if lang not in parts:
+        parts.insert(0, str(lang))
+    return "+".join(parts)
+
+
 def configure_from_settings(settings) -> None:
+    prefix = settings.tessdata_prefix
+    finetune_dir = _install_finetune_tessdata(settings)
+    if finetune_dir is not None and prefix is None:
+        prefix = finetune_dir
     configure(
         tesseract_cmd=settings.tesseract_cmd,
-        tessdata_prefix=settings.tessdata_prefix,
+        tessdata_prefix=prefix,
     )
 
 
@@ -161,8 +196,9 @@ def build_config(
     return " ".join(parts)
 
 
-def ensure_ready(lang_bundle: str) -> None:
+def ensure_ready(lang_bundle: str, *, settings=None) -> None:
     """Raise with install hint if tesseract or required langs are missing."""
+    lang_bundle = resolve_lang_bundle(lang_bundle, settings)
     if not available():
         raise RuntimeError(
             "tesseract not found on PATH. Install:\n"

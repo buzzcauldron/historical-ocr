@@ -224,6 +224,7 @@ def export_job(
                 document_txt=document_txt,
                 pages=review_pages,
                 render_heatmap=s.symbol_glyph_heatmap,
+                conf_threshold=float(s.review_conf_threshold),
             ),
         )
 

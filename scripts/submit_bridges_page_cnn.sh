@@ -8,6 +8,7 @@
 # Optional env:
 #   PAGE_CNN_LIMIT=2000          cap per HF source
 #   PAGE_CNN_PIXPARSE_LIMIT=500  add pixparse sample
+#   NEWSPAPER_GT_LIMIT=2000      Chronicling America pages → print class
 #   PAGE_CNN_EPOCHS=25
 set -euo pipefail
 
@@ -38,6 +39,7 @@ REMOTE_ENV="cd '$DEST'"
 [[ -n "${PAGE_CNN_LIMIT:-}" ]] && REMOTE_ENV="$REMOTE_ENV && export PAGE_CNN_LIMIT='$PAGE_CNN_LIMIT'"
 [[ -n "${PAGE_CNN_PIXPARSE_LIMIT:-}" ]] && REMOTE_ENV="$REMOTE_ENV && export PAGE_CNN_PIXPARSE_LIMIT='$PAGE_CNN_PIXPARSE_LIMIT'"
 [[ -n "${PAGE_CNN_EPOCHS:-}" ]] && REMOTE_ENV="$REMOTE_ENV && export PAGE_CNN_EPOCHS='$PAGE_CNN_EPOCHS'"
+[[ -n "${NEWSPAPER_GT_LIMIT:-}" ]] && REMOTE_ENV="$REMOTE_ENV && export NEWSPAPER_GT_LIMIT='$NEWSPAPER_GT_LIMIT'"
 
 if [[ "$TRAIN_ONLY" -eq 0 ]]; then
   echo "[bridges] submit fetch job (RM-shared, up to 6h)"

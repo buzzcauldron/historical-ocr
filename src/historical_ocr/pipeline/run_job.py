@@ -5,13 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
-from historical_ocr.backends import fingerprint as fp_backend
 from historical_ocr.config import JobPaths, Settings
-from historical_ocr.models.manifest import FingerprintSummary, JobManifest
+from historical_ocr.models.manifest import JobManifest
 from historical_ocr.pipeline.acquire import acquire_from_url, ingest_local
-from historical_ocr.lib.fast_presets import apply_fast_presets
+from historical_ocr.lib.fast_presets import apply_fast_presets, apply_low_latency_presets
+from historical_ocr.lib.quality_presets import DEFAULT_QUALITY_TIER, resolve_run_flags
+from historical_ocr.lib.rules_only import apply_rules_only_presets
 from historical_ocr.pipeline.export import export_job
-from historical_ocr.pipeline.manuscript import transcribe_pages
 from historical_ocr.pipeline.prepare import prepare_pages
 from historical_ocr.pipeline.clean import clean_print_pages
 from historical_ocr.document_types.print_types import apply_print_doc_type
@@ -38,32 +38,50 @@ def run_job(
     limit: int | None = None,
     inputs: list[Path] | None = None,
     settings: Settings | None = None,
-    mode: str = "auto",
-    prompt: Path | None = None,
-    fingerprint: bool = False,
+    mode: str = "print",
+    quality: str | None = None,
     clean: bool | None = None,
     print_doc_type: str | None = None,
     ocr_combination: str | None = None,
     publication_year: int | None = None,
     print_language: str | None = None,
-    extract_figures: bool = False,
+    fingerprint: bool = False,
+    extract_figures: bool | None = None,
+    deskew: bool | None = None,
     fast: bool = False,
+    rules_only: bool = False,
+    low_latency: bool = False,
     symbol_filter: bool | None = None,
     glyph_heatmap: bool | None = None,
+    review_conf_threshold: float | None = None,
     log_fn: Callable[[str], None] | None = None,
+    **_: object,
 ) -> JobManifest:
     s = settings or Settings()
-    if fast or s.fast_mode:
+    tier_name = (quality or s.default_quality or DEFAULT_QUALITY_TIER)  # type: ignore[assignment]
+    _, tier_flags = resolve_run_flags(
+        quality=tier_name,
+        fast=fast,
+        rules_only=rules_only,
+        low_latency=low_latency,
+    )
+    if tier_flags.get("low_latency"):
+        s = apply_low_latency_presets(s)
+    elif tier_flags.get("rules_only"):
+        s = apply_rules_only_presets(s)
+    elif tier_flags.get("fast"):
         s = apply_fast_presets(s)
+    else:
+        s = apply_rules_only_presets(s)
     updates: dict = {}
-    if extract_figures:
-        updates["figure_extract_enabled"] = True
     if clean is not None:
         updates["clean_print"] = clean
     if symbol_filter is not None:
         updates["symbol_filter"] = symbol_filter
     if glyph_heatmap is not None:
         updates["symbol_glyph_heatmap"] = glyph_heatmap
+    if review_conf_threshold is not None:
+        updates["review_conf_threshold"] = float(review_conf_threshold)
     if print_doc_type:
         updates["print_doc_type"] = print_doc_type
     if ocr_combination:
@@ -72,6 +90,12 @@ def run_job(
         updates["publication_year"] = publication_year
     if print_language:
         updates["print_language"] = print_language
+    if fingerprint:
+        updates["fingerprint_enabled"] = True
+    if extract_figures is not None:
+        updates["figure_extract_enabled"] = extract_figures
+    if deskew is not None:
+        updates["deskew_enabled"] = deskew
     if updates:
         s = s.model_copy(update=updates)
     job = JobPaths((s.jobs_dir / job_id).expanduser().resolve())
@@ -79,7 +103,7 @@ def run_job(
 
     manifest = JobManifest(
         job_id=job_id,
-        material_mode=mode,  # type: ignore[arg-type]
+        material_mode="print",
         publication_year=s.publication_year or publication_year,
         print_language=print_language if print_language is not None else s.print_language,
     )
@@ -87,6 +111,9 @@ def run_job(
     def _log(msg: str) -> None:
         if log_fn:
             log_fn(msg)
+
+    if mode not in ("print",):
+        _log(f"note: --mode {mode} ignored (print-only)")
 
     if url:
         sources = acquire_from_url(url, job, manifest, limit=limit, log_fn=_log)
@@ -100,6 +127,28 @@ def run_job(
     prepare_pages(sources, job, manifest, s)
 
     pdf_sources = [p for p in sources if p.suffix.lower() == _PDF]
+    if s.fingerprint_enabled and pdf_sources:
+        from historical_ocr.backends import fingerprint as fp_backend
+
+        if fp_backend.available():
+            scan_out = job.fingerprint
+            try:
+                fp_backend.scan_pdf(pdf_sources[0], scan_out, dpi=300, seg_dpi=200)
+                if s.deskew_enabled:
+                    try:
+                        n = fp_backend.deskew_scan_pages(scan_out)
+                        if n:
+                            _log(f"deskew: {n} fingerprint page(s) corrected")
+                    except Exception as deskew_exc:
+                        _log(f"deskew: fingerprint pages skipped — {deskew_exc}")
+                summary = fp_backend.load_summary(scan_out)
+                if summary:
+                    manifest.fingerprint = summary
+                    _log(f"fingerprint: {len(summary.type_case_matches)} type-case match(es)")
+            except Exception as exc:
+                _log(f"fingerprint: skipped — {exc}")
+        else:
+            _log("fingerprint: manuscript-fingerprint not on PATH — using image type probes")
     if pdf_sources and s.pdf_density_ocr:
         from historical_ocr.lib.print_ocr import save_pdf_density_artifact
 
@@ -107,60 +156,27 @@ def run_job(
         if save_pdf_density_artifact(pdf_sources[0], out):
             _log(f"artifact: {out.relative_to(job.root)}")
 
-    if fingerprint and pdf_sources:
-        if not fp_backend.available():
-            _log("warn: manuscript-fingerprint not on PATH — skipping fingerprint")
-        else:
-            scan_dir = job.fingerprint / pdf_sources[0].stem
-            fp_backend.scan_pdf(
-                pdf_sources[0],
-                scan_dir,
-                dpi=s.fingerprint_dpi,
-                seg_dpi=s.fingerprint_seg_dpi,
-            )
-            manifest.fingerprint = FingerprintSummary(
-                job_dir=str(scan_dir.relative_to(job.root)),
-                suggested_material=fp_backend.suggested_material(scan_dir),  # type: ignore[arg-type]
-            )
-
-    resolved = apply_routes(
-        manifest,
-        mode,
-        job_root=job.root,
-        settings=s,
-        log_fn=_log,
-    )
+    resolved = apply_routes(manifest, "print", job_root=job.root, settings=s, log_fn=_log)
     manifest.resolved_material = resolved  # type: ignore[assignment]
 
-    needs_manuscript = resolved in ("manuscript", "mixed") or any(
-        p.route == "manuscript" for p in manifest.pages
+    print_spec = resolve_print_spec(s, manifest)
+    manifest.print_language = s.print_language
+    s = apply_print_doc_type(s, print_spec)
+    if clean is not None:
+        s = s.model_copy(update={"clean_print": clean})
+    if ocr_combination:
+        s = s.model_copy(update={"ocr_combination": ocr_combination})
+    manifest.normalization_mode = s.normalization_mode
+    ocr_pages(
+        manifest.pages,
+        job,
+        manifest,
+        s,
+        source_pdf=pdf_sources[0] if pdf_sources else None,
+        print_spec=print_spec,
+        log_fn=_log,
     )
-    if needs_manuscript:
-        if not prompt:
-            raise ValueError("--prompt required for manuscript transcription")
-        transcribe_pages(manifest.pages, job, manifest, s, prompt_path=prompt, log_fn=_log)
-
-    needs_print = resolved in ("print", "mixed") or any(p.route == "print" for p in manifest.pages)
-    if needs_print:
-        print_spec = resolve_print_spec(s, manifest)
-        manifest.print_language = s.print_language
-        s = apply_print_doc_type(s, print_spec)
-        if clean is not None:
-            s = s.model_copy(update={"clean_print": clean})
-        if ocr_combination:
-            s = s.model_copy(update={"ocr_combination": ocr_combination})
-        manifest.normalization_mode = s.normalization_mode
-        ocr_pages(
-            manifest.pages,
-            job,
-            manifest,
-            s,
-            source_pdf=pdf_sources[0] if pdf_sources else None,
-            print_spec=print_spec,
-            prompt_path=prompt,
-            log_fn=_log,
-        )
-        clean_print_pages(manifest.pages, job, manifest, s, log_fn=_log)
+    clean_print_pages(manifest.pages, job, manifest, s, log_fn=_log)
 
     export_job(
         job,

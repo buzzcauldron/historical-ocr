@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-_STATE_VERSION = 1
+_STATE_VERSION = 3
 
 
 def gui_state_path() -> Path:

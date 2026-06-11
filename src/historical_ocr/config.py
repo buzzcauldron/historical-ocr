@@ -8,15 +8,13 @@ from typing import Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-MaterialMode = Literal["auto", "manuscript", "print"]
-LineationBackend = Literal["glyph_machina", "kraken", "mask"]
+MaterialMode = Literal["print"]
 NormalizationMode = Literal["diplomatic", "normalized", "modern"]
 OcrCombination = Literal[
     "default",
     "tesseract_only",
     "tesseract_then_clean",
     "pdf_text_first",
-    "shell_print",
 ]
 
 
@@ -43,12 +41,6 @@ class Settings(BaseSettings):
         default=16_000_000,
         validation_alias="HISTORICAL_OCR_MAX_IMAGE_PIXELS",
     )
-    fingerprint_dpi: int = Field(default=800, validation_alias="HISTORICAL_OCR_FINGERPRINT_DPI")
-    fingerprint_seg_dpi: int = Field(
-        default=300,
-        validation_alias="HISTORICAL_OCR_FINGERPRINT_SEG_DPI",
-    )
-
     default_provider: str = Field(
         default="anthropic",
         validation_alias="HISTORICAL_OCR_DEFAULT_PROVIDER",
@@ -56,10 +48,6 @@ class Settings(BaseSettings):
     default_model: str | None = Field(
         default=None,
         validation_alias="HISTORICAL_OCR_MODEL",
-    )
-    lineation_backend: LineationBackend = Field(
-        default="glyph_machina",
-        validation_alias="HISTORICAL_OCR_LINEATION_BACKEND",
     )
     tesseract_lang: str = Field(
         default="lat+frk+eng",
@@ -137,6 +125,20 @@ class Settings(BaseSettings):
         default=True,
         validation_alias="HISTORICAL_OCR_SYMBOL_GLYPH_HEATMAP",
     )
+    review_conf_threshold: float = Field(
+        default=65.0,
+        ge=0.0,
+        le=100.0,
+        validation_alias="HISTORICAL_OCR_REVIEW_CONF_THRESHOLD",
+    )
+    symbol_drop_orphan_lines: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_SYMBOL_DROP_ORPHAN_LINES",
+    )
+    symbol_orphan_line_chars: str = Field(
+        default="1lI|_@.`:",
+        validation_alias="HISTORICAL_OCR_SYMBOL_ORPHAN_LINE_CHARS",
+    )
 
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
     openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
@@ -154,14 +156,107 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="HISTORICAL_OCR_CLEAN_LLM_MODEL",
     )
-
-    page_cnn_model: Path | None = Field(
-        default=None,
-        validation_alias="HISTORICAL_OCR_PAGE_CNN_MODEL",
+    tune_rules_path: Path | None = Field(
+        default=Path("data/user_gt/tuned_rules.json"),
+        validation_alias="HISTORICAL_OCR_TUNE_RULES",
     )
-    page_cnn_threshold: float = Field(
-        default=0.5,
-        validation_alias="HISTORICAL_OCR_PAGE_CNN_THRESHOLD",
+    default_quality: str = Field(
+        default="medium",
+        validation_alias="HISTORICAL_OCR_DEFAULT_QUALITY",
+    )
+    tesseract_finetune_lang: str | None = Field(
+        default="histnews",
+        validation_alias="HISTORICAL_OCR_TESSERACT_FINETUNE_LANG",
+    )
+    tesseract_finetune_path: Path | None = Field(
+        default=Path("models/histnews.traineddata"),
+        validation_alias="HISTORICAL_OCR_TESSERACT_FINETUNE_PATH",
+    )
+    escalate_low_confidence: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_ESCALATE_LOW_CONFIDENCE",
+    )
+    escalate_min_mean_confidence: float = Field(
+        default=72.0,
+        validation_alias="HISTORICAL_OCR_ESCALATE_MIN_MEAN_CONF",
+    )
+    escalate_max_low_conf_ratio: float = Field(
+        default=0.35,
+        validation_alias="HISTORICAL_OCR_ESCALATE_MAX_LOW_CONF_RATIO",
+    )
+    fingerprint_enabled: bool = Field(
+        default=False,
+        validation_alias="HISTORICAL_OCR_FINGERPRINT_ENABLED",
+    )
+    handwriting_detect_enabled: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_HANDWRITING_DETECT",
+    )
+    handwriting_gemini_enabled: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_HANDWRITING_GEMINI",
+    )
+    handwriting_gemini_model: str | None = Field(
+        default=None,
+        validation_alias="HISTORICAL_OCR_HANDWRITING_GEMINI_MODEL",
+    )
+    handwriting_gemini_max_regions: int = Field(
+        default=8,
+        ge=1,
+        le=40,
+        validation_alias="HISTORICAL_OCR_HANDWRITING_GEMINI_MAX",
+    )
+    handwriting_gemini_conf_threshold: float = Field(
+        default=58.0,
+        ge=0.0,
+        le=100.0,
+        validation_alias="HISTORICAL_OCR_HANDWRITING_GEMINI_CONF",
+    )
+    per_page_type_routing: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_PER_PAGE_TYPE_ROUTING",
+    )
+    damage_retry_enabled: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_DAMAGE_RETRY_ENABLED",
+    )
+    damage_retry_conf_threshold: float = Field(
+        default=65.0,
+        validation_alias="HISTORICAL_OCR_DAMAGE_RETRY_CONF",
+    )
+    damage_retry_max_lines: int = Field(
+        default=40,
+        ge=1,
+        le=200,
+        validation_alias="HISTORICAL_OCR_DAMAGE_RETRY_MAX_LINES",
+    )
+    damage_llm_enabled: bool = Field(
+        default=False,
+        validation_alias="HISTORICAL_OCR_DAMAGE_LLM_ENABLED",
+    )
+    damage_llm_conf_threshold: float = Field(
+        default=55.0,
+        ge=0.0,
+        le=100.0,
+        validation_alias="HISTORICAL_OCR_DAMAGE_LLM_CONF",
+    )
+    damage_llm_max_lines: int = Field(
+        default=12,
+        ge=0,
+        le=80,
+        validation_alias="HISTORICAL_OCR_DAMAGE_LLM_MAX_LINES",
+    )
+    deskew_enabled: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_DESKEW_ENABLED",
+    )
+    deskew_max_angle: float = Field(
+        default=15.0,
+        validation_alias="HISTORICAL_OCR_DESKEW_MAX_ANGLE",
+    )
+    deskew_min_angle: float = Field(
+        default=0.25,
+        validation_alias="HISTORICAL_OCR_DESKEW_MIN_ANGLE",
     )
 
     print_doc_type: str = Field(
@@ -190,7 +285,7 @@ class Settings(BaseSettings):
     )
 
     figure_extract_enabled: bool = Field(
-        default=False,
+        default=True,
         validation_alias="HISTORICAL_OCR_FIGURE_EXTRACT_ENABLED",
     )
     figure_extract_backend: str = Field(

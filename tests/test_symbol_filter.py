@@ -8,6 +8,7 @@ from historical_ocr.document_types.print_types import PrintDocumentTypeSpec
 from historical_ocr.lib.layout_ocr import LayoutOcrResult, OcrLine, apply_symbol_filter_to_result
 from historical_ocr.lib.symbol_filter import (
     SymbolFilterOptions,
+    is_orphan_damage_line,
     resolve_symbol_filter,
     sanitize_line,
     sanitize_ocr_text,
@@ -88,6 +89,22 @@ def test_resolve_glyph_heatmap_off_in_fast_mode() -> None:
     fast = apply_fast_presets(Settings())
     opts = resolve_symbol_filter(fast)
     assert opts.save_glyph_heatmap is False
+
+
+def test_orphan_damage_line_drops_lone_digit() -> None:
+    opts = SymbolFilterOptions(enabled=True)
+    assert is_orphan_damage_line("1", opts) is True
+    assert is_orphan_damage_line("l", opts) is True
+    assert is_orphan_damage_line("word", opts) is False
+    assert is_orphan_damage_line("1st", opts) is False
+
+
+def test_sanitize_ocr_text_drops_orphan_lines() -> None:
+    opts = SymbolFilterOptions(enabled=True)
+    raw = "will see and build for a new day as bwana crawls to his grave. @\n1\n.At the level"
+    out = sanitize_ocr_text(raw, opts)
+    assert "1" not in out.splitlines()
+    assert "At the level" in out
 
 
 def test_symbol_filter_disabled_passthrough() -> None:

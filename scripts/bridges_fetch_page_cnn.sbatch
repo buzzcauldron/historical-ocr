@@ -32,6 +32,20 @@ python scripts/fetch_page_cnn_data.py \
   --source ocr-pdf-degraded \
   "${LIMIT_ARGS[@]}"
 
+NGT="${NEWSPAPER_GT_DIR:-$ROOT/data/newspaper_gt}"
+if [[ "${PAGE_CNN_FETCH_NEWSPAPER:-1}" == "1" ]]; then
+  echo "[fetch] Chronicling America newspaper GT → page_cnn/print"
+  python scripts/fetch_newspaper_gt.py \
+    --out "$NGT" \
+    --limit "${NEWSPAPER_GT_LIMIT:-2000}" \
+    --val-ratio "${NEWSPAPER_GT_VAL_RATIO:-0.1}"
+  python scripts/fetch_page_cnn_data.py \
+    --out "$DATA" \
+    --newspaper-gt "$NGT" \
+    --newspaper-source chronicling-america \
+    --limit "${NEWSPAPER_GT_LIMIT:-2000}"
+fi
+
 # Optional pixparse sample (set PAGE_CNN_PIXPARSE_LIMIT=500 to enable in submit script).
 if [[ -n "${PAGE_CNN_PIXPARSE_LIMIT:-}" ]]; then
   python scripts/fetch_page_cnn_data.py \

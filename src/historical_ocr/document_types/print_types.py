@@ -55,6 +55,12 @@ class PrintDocumentTypeSpec:
     tesseract_char_whitelist: str | None = None
 
     layout_backend: str = "tesseract"
+    column_ocr: bool = False
+    column_ocr_psm: int = 6
+    column_ocr_min_gutter_px: int = 14
+    tei_section_ocr: bool = False
+    tei_section_psm: int = 6
+    tei_section_min_gap_px: int = 18
     ocr_combination: str = "tesseract_then_clean"
     normalization_mode: NormalizationMode = "normalized"
 
@@ -96,6 +102,12 @@ def _parse_spec(name: str, raw: dict[str, Any], search_dirs: list[Path]) -> Prin
         tesseract_char_blacklist=ocr.get("char_blacklist"),
         tesseract_char_whitelist=ocr.get("char_whitelist"),
         layout_backend=str(layout.get("backend", "tesseract")),
+        column_ocr=bool(layout.get("column_ocr", False)),
+        column_ocr_psm=int(layout.get("column_ocr_psm", 6)),
+        column_ocr_min_gutter_px=int(layout.get("column_ocr_min_gutter_px", 14)),
+        tei_section_ocr=bool(layout.get("tei_section_ocr", False)),
+        tei_section_psm=int(layout.get("tei_section_psm", layout.get("column_ocr_psm", 6))),
+        tei_section_min_gap_px=int(layout.get("tei_section_min_gap_px", 18)),
         ocr_combination=str(raw.get("ocr_combination", "tesseract_then_clean")),
         normalization_mode=str(norm.get("mode", "normalized")),  # type: ignore[arg-type]
         shell_doc_type=shell.get("doc_type"),

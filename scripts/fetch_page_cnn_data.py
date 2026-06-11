@@ -35,6 +35,17 @@ def main() -> int:
         action="append",
         help="Akdeniz GT id (akdeniz-kraken-vatlib, akdeniz-kraken-cp40, akdeniz-deed-finetune)",
     )
+    ap.add_argument(
+        "--newspaper-gt",
+        type=Path,
+        help="Corpus root from historical-ocr gt fetch (data/newspaper_gt)",
+    )
+    ap.add_argument(
+        "--newspaper-source",
+        action="append",
+        dest="newspaper_sources",
+        help="Newspaper GT source id (default chronicling-america when --newspaper-gt set)",
+    )
     ap.add_argument("--ocrdatasets-root", type=Path, help="Clone of xinke-wang/OCRDatasets or data parent")
     ap.add_argument("--akdeniz-home", type=Path, help="Akdeniz $HOME (default: AKDENIZ_HOME or ~)")
     ap.add_argument(
@@ -64,10 +75,17 @@ def main() -> int:
         extra.append((Path(path).expanduser().resolve(), label))  # type: ignore[arg-type]
 
     out = args.out.expanduser().resolve()
+    newspaper_gt_dir = args.newspaper_gt.expanduser().resolve() if args.newspaper_gt else None
+    newspaper_sources = args.newspaper_sources
+    if newspaper_gt_dir and not newspaper_sources:
+        newspaper_sources = ["chronicling-america"]
+
     counts = fetch_sources(
         out,
         hf_sources=args.source,
         ocrdatasets_sources=args.ocrdatasets,
+        newspaper_gt_sources=newspaper_sources,
+        newspaper_gt_dir=newspaper_gt_dir,
         remote_gt_sources=args.akdeniz_gt,
         ocrdatasets_root=args.ocrdatasets_root.expanduser().resolve() if args.ocrdatasets_root else None,
         akdeniz_home=args.akdeniz_home.expanduser().resolve() if args.akdeniz_home else None,

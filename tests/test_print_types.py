@@ -39,7 +39,7 @@ def test_suggest_print_doc_type() -> None:
 
 def test_print_selector_tesseract_then_clean() -> None:
     spec = load_print_doc_type("eebo_blackletter")
-    plan = plan_print_execution(Settings(), spec, shell_available=False, pdf_available=False)
+    plan = plan_print_execution(Settings(), spec, pdf_available=False)
     assert plan.kind == PrintPlanKind.TESSERACT_THEN_CLEAN
     assert plan.backends == ("tesseract",)
 
@@ -47,5 +47,5 @@ def test_print_selector_tesseract_then_clean() -> None:
 def test_print_selector_pdf_text_first() -> None:
     spec = load_print_doc_type("modern_historical")
     s = Settings(ocr_combination="pdf_text_first")
-    plan = plan_print_execution(s, spec, shell_available=False, pdf_available=True)
+    plan = plan_print_execution(s, spec, pdf_available=True)
     assert plan.kind == PrintPlanKind.PDF_TEXT_FIRST

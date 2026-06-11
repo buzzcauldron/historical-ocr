@@ -141,6 +141,8 @@ def lines_to_tei(
     *,
     title: str | None = None,
 ) -> None:
+    from historical_ocr.lib.tei_layout import append_sectioned_facsimile_zones, append_sectioned_page_content
+
     dst.parent.mkdir(parents=True, exist_ok=True)
     root = ET.Element(f"{_T}TEI")
     header = ET.SubElement(root, f"{_T}teiHeader")
@@ -152,23 +154,7 @@ def lines_to_tei(
     text_el = ET.SubElement(root, f"{_T}text")
     body = ET.SubElement(text_el, f"{_T}body")
     page_div = ET.SubElement(body, f"{_T}div", type="page")
-    p = ET.SubElement(page_div, f"{_T}p")
-
-    for line in layout.lines:
-        if not line.text.strip():
-            continue
-        lb_id = f"lb_{page_id}_{line.line_num}"
-        lb = ET.SubElement(
-            p,
-            f"{_T}lb",
-            {
-                "n": str(line.line_num),
-                "xml:id": lb_id,
-                "rend": "line",
-                "coord": f"{line.left},{line.top},{line.width},{line.height}",
-            },
-        )
-        lb.tail = line.text
+    append_sectioned_page_content(page_div, page_id, layout)
 
     fac = ET.SubElement(text_el, f"{_T}facsimile")
     surface = ET.SubElement(
@@ -181,21 +167,24 @@ def lines_to_tei(
             "lry": str(layout.page_height),
         },
     )
-    for line in layout.lines:
-        if not line.text.strip():
-            continue
-        ET.SubElement(
-            surface,
-            f"{_T}zone",
-            {
-                "rendition": "textline",
-                "ulx": str(line.left),
-                "uly": str(line.top),
-                "lrx": str(line.left + line.width),
-                "lry": str(line.top + line.height),
-                "corresp": f"#lb_{page_id}_{line.line_num}",
-            },
-        )
+    if layout.sections:
+        append_sectioned_facsimile_zones(surface, page_id, layout)
+    else:
+        for line in layout.lines:
+            if not line.text.strip():
+                continue
+            ET.SubElement(
+                surface,
+                f"{_T}zone",
+                {
+                    "rendition": "textline",
+                    "ulx": str(line.left),
+                    "uly": str(line.top),
+                    "lrx": str(line.left + line.width),
+                    "lry": str(line.top + line.height),
+                    "corresp": f"#lb_{page_id}_{line.line_num}",
+                },
+            )
 
     tree = ET.ElementTree(root)
     ET.indent(tree, space="  ")

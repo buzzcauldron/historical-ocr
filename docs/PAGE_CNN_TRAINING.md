@@ -23,6 +23,7 @@ historical-ocr run job -i book.pdf --mode auto
 | `pixparse-pdfa` | print | [pixparse/pdfa-eng-wds](https://huggingface.co/datasets/pixparse/pdfa-eng-wds) (streamed sample) |
 | `pixparse-idl` | print | [pixparse/idl-wds](https://huggingface.co/datasets/pixparse/idl-wds) (streamed sample) |
 | `iam-histdb`, `pinkas`, … | manuscript | [xinke-wang/OCRDatasets](https://github.com/xinke-wang/OCRDatasets) catalog (local checkout) |
+| `chronicling-america` | print | `historical-ocr gt fetch` → `data/newspaper_gt/` (1770–1810 newspapers) |
 | `akdeniz-kraken-*` | manuscript | Akdeniz kraken GT synced to Bridges |
 
 Pixparse PDF corpora: [PDF Document / OCR Datasets](https://huggingface.co/collections/pixparse/pdf-document-ocr-datasets).
@@ -39,6 +40,10 @@ historical-ocr cnn fetch --all-hf --limit 500
 # OCRDatasets historical manuscripts (download dataset into checkout first)
 git clone https://github.com/xinke-wang/OCRDatasets ~/OCRDatasets
 historical-ocr cnn fetch --ocrdatasets iam-histdb --ocrdatasets-root ~/OCRDatasets/data
+
+# Chronicling America newspaper pages (after gt fetch)
+historical-ocr gt fetch --limit 2000 --val-ratio 0.1
+historical-ocr cnn fetch --newspaper-gt data/newspaper_gt
 
 # Arbitrary local folders
 historical-ocr cnn fetch --extra print:/path/to/scans --extra manuscript:/path/to/mss
@@ -85,6 +90,8 @@ Environment overrides:
 | `PAGE_CNN_EPOCHS` | `25` |
 | `PAGE_CNN_PIXPARSE_LIMIT` | unset (skip pixparse unless set) |
 | `PAGE_CNN_AKDENIZ_GT` | `$ROOT/data/akdeniz-gt` |
+| `NEWSPAPER_GT_LIMIT` | `2000` (CA pages copied into `print/`) |
+| `PAGE_CNN_FETCH_NEWSPAPER` | `1` (set `0` to skip CA harvest) |
 
 Pull trained model locally:
 

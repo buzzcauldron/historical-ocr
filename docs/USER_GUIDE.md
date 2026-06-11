@@ -4,6 +4,16 @@ This tool turns **scanned books, PDFs, and page images** into **plain text** you
 
 ---
 
+## Simple GUI
+
+```bash
+historical-ocr gui
+```
+
+1. Paste an **API key** (optional) — provider is detected automatically.
+2. Choose **Free** (~5 s/page, rules + your tune rules), **Medium** (~6 s, glyph filter), or **High** (~30–60 s, + AI clean when a key is set).
+3. **Training loop:** Run → edit `export/*.corrected.txt` → **Teach** to update tune rules (no LLM needed).
+
 ## What you get
 
 After a run finishes, open the job folder and look in **`export/`**. These are the files meant for everyday use:

@@ -10,6 +10,7 @@ DEFAULT_MIN_CONFIDENCE = 60.0
 DEFAULT_CHAR_BLACKLIST = "|_"
 DEFAULT_STRIP_TRAILING = "|_:"
 DEFAULT_ALWAYS_DROP = frozenset("|_")
+DEFAULT_ORPHAN_LINE_CHARS = frozenset("1lI|_@.`:")
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,9 @@ class SymbolFilterOptions:
     always_drop_chars: frozenset[str] = DEFAULT_ALWAYS_DROP
     glyph_filter: bool = True
     save_glyph_heatmap: bool = False
+    drop_orphan_lines: bool = True
+    orphan_line_chars: frozenset[str] = DEFAULT_ORPHAN_LINE_CHARS
+    font_profile: object | None = None
 
 
 def resolve_symbol_filter(settings, spec=None) -> SymbolFilterOptions:
@@ -39,13 +43,27 @@ def resolve_symbol_filter(settings, spec=None) -> SymbolFilterOptions:
         and not getattr(settings, "fast_mode", False)
     )
 
+    font_profile = None
     if spec is not None:
         if getattr(spec, "tesseract_char_blacklist", None):
             blacklist = spec.tesseract_char_blacklist
         if getattr(spec, "tesseract_char_whitelist", None):
             whitelist = spec.tesseract_char_whitelist
+        if glyph_filter:
+            from historical_ocr.lib.historical_fonts import resolve_font_profile
+
+            font_profile = resolve_font_profile(
+                typeface=getattr(spec, "typeface", "") or "",
+                script=getattr(spec, "script", "") or "",
+                era=getattr(spec, "era", "") or "",
+                language=getattr(spec, "language", "") or "",
+            )
 
     always_drop = frozenset(blacklist) if blacklist else DEFAULT_ALWAYS_DROP
+
+    orphan_chars = frozenset(
+        getattr(settings, "symbol_orphan_line_chars", "") or DEFAULT_ORPHAN_LINE_CHARS,
+    )
 
     return SymbolFilterOptions(
         enabled=enabled,
@@ -56,6 +74,9 @@ def resolve_symbol_filter(settings, spec=None) -> SymbolFilterOptions:
         always_drop_chars=always_drop,
         glyph_filter=glyph_filter,
         save_glyph_heatmap=save_heatmap,
+        drop_orphan_lines=bool(getattr(settings, "symbol_drop_orphan_lines", True)) and enabled,
+        orphan_line_chars=orphan_chars,
+        font_profile=font_profile,
     )
 
 
@@ -105,6 +126,31 @@ def needs_glyph_review(text: str, conf: float, opts: SymbolFilterOptions) -> boo
         return True
     if conf < opts.min_confidence:
         return True
+    if opts.font_profile is not None:
+        from historical_ocr.lib.historical_fonts import token_needs_font_review
+
+        if token_needs_font_review(token, opts.font_profile, conf=conf):
+            return True
+    return False
+
+
+def is_orphan_damage_line(line: str, opts: SymbolFilterOptions) -> bool:
+    """True when a whole line is a single scan-damage mark (not real text)."""
+    if not opts.drop_orphan_lines:
+        return False
+    token = line.strip()
+    if not token:
+        return True
+    parts = token.split()
+    if len(parts) != 1:
+        return False
+    ch = parts[0]
+    if len(ch) == 1 and ch in opts.orphan_line_chars:
+        return True
+    if len(ch) == 1 and ch.isdigit():
+        return True
+    if len(ch) == 1 and ch in opts.always_drop_chars:
+        return True
     return False
 
 
@@ -136,5 +182,11 @@ def sanitize_line(line: str, opts: SymbolFilterOptions) -> str:
 
 
 def sanitize_ocr_text(text: str, opts: SymbolFilterOptions) -> str:
-    lines = [sanitize_line(ln, opts) for ln in text.splitlines()]
+    lines: list[str] = []
+    for ln in text.splitlines():
+        if is_orphan_damage_line(ln, opts):
+            continue
+        clean = sanitize_line(ln, opts)
+        if clean:
+            lines.append(clean)
     return "\n".join(lines).strip()

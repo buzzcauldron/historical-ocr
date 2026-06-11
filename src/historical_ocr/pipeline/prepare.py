@@ -27,6 +27,9 @@ def _normalize_into_pages(src: Path, dest: Path, settings: Settings) -> Path:
         max_pixels=settings.max_image_pixels,
         quality=settings.jpeg_quality,
         optimize=settings.jpeg_optimize,
+        deskew=settings.deskew_enabled,
+        deskew_max_angle=settings.deskew_max_angle,
+        deskew_min_angle=settings.deskew_min_angle,
     )
     if meta.output.resolve() != src.resolve() and src.parent == dest.parent:
         src.unlink(missing_ok=True)

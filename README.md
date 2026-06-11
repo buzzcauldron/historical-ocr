@@ -25,7 +25,7 @@ See [docs/VENDOR.md](docs/VENDOR.md) and [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md).
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[all]"
+pip install -e .
 cp .env.example .env   # add API keys for manuscript runs
 ```
 
@@ -72,7 +72,7 @@ jobs/<job_id>/
 ## Desktop GUI
 
 ```bash
-pip install -e ".[all]"    # includes tkinterdnd2 for drag-and-drop
+pip install -e .    # includes tkinterdnd2 for drag-and-drop
 historical-ocr gui
 # or: historical-ocr-gui
 ```

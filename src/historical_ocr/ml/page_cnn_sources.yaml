@@ -88,6 +88,13 @@ ocrdatasets:
     default_limit: 2000
     notes: "Modern handwriting; useful manuscript proxy."
 
+# Local newspaper GT (historical-ocr gt fetch). Harvest with --newspaper-gt.
+newspaper_gt:
+  chronicling-america:
+    label: print
+    default_limit: 5000
+    notes: "Chronicling America 1770–1810 page images from data/newspaper_gt/."
+
 # Remote GT paths (Akdeniz → Bridges). Harvest with --akdeniz-root or env.
 remote_gt:
   akdeniz-kraken-vatlib:

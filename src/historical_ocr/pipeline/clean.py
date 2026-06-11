@@ -7,6 +7,7 @@ from typing import Callable
 
 from historical_ocr.backends import ocr_cleanup as underwood
 from historical_ocr.config import JobPaths, Settings
+from historical_ocr.lib.rules_only import apply_user_tune_rules, post_clean_sanitize
 from historical_ocr.lib.layout_export import export_layout_artifacts, layout_from_clean_text
 from historical_ocr.lib.layout_ocr import write_layout_json
 from historical_ocr.models.manifest import JobManifest, PageRecord
@@ -46,14 +47,39 @@ def clean_print_pages(
         raw = raw_path.read_text(encoding="utf-8")
         _log(f"clean: {page.page_id} (Underwood rules)")
 
+        llm = settings.clean_llm
+        if llm and str(llm).lower() in ("none", "off", "false", "0"):
+            llm = None
+
+        if page.layout_path and not settings.damage_llm_enabled:
+            from historical_ocr.lib.layout_ocr import read_layout_json
+            from historical_ocr.lib.confidence_escalation import should_escalate_to_llm_clean
+
+            layout_path = job.root / page.layout_path
+            if layout_path.is_file():
+                layout = read_layout_json(layout_path)
+                decision = should_escalate_to_llm_clean(layout, settings)
+                if decision.escalate and not llm:
+                    if settings.google_api_key:
+                        llm = "gemini"
+                    elif settings.anthropic_api_key:
+                        llm = "anthropic"
+                    if llm:
+                        _log(f"escalate: {page.page_id} — {decision.reason} → {llm} clean")
+
         cleaned = underwood.clean_text(
             raw,
             apply_variants=settings.clean_apply_variants,
             rejoin_linebreaks=settings.clean_rejoin_linebreaks,
             apply_corrections=settings.clean_apply_corrections,
-            llm=settings.clean_llm,
+            llm=llm,
             model=settings.clean_llm_model,
+            anthropic_api_key=settings.anthropic_api_key,
+            google_api_key=settings.google_api_key,
+            openai_api_key=settings.openai_api_key,
         )
+        cleaned = post_clean_sanitize(cleaned, settings)
+        cleaned = apply_user_tune_rules(cleaned, settings)
 
         out = clean_dir / f"{page.page_id}.txt"
         out.write_text(cleaned + "\n", encoding="utf-8")

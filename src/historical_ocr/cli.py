@@ -10,11 +10,8 @@ from pathlib import Path
 from historical_ocr import __version__
 from historical_ocr.config import Settings
 from historical_ocr.backends import bib_ocr as bib_backend
-from historical_ocr.backends import fingerprint as fp_backend
 from historical_ocr.backends import ocr_cleanup as underwood_backend
-from historical_ocr.backends import page_cnn as cnn_backend
 from historical_ocr.backends import tesseract as tess_backend
-from historical_ocr.backends import transcriber_shell as shell_backend
 from historical_ocr.pipeline.acquire import acquire_from_url, ingest_local
 from historical_ocr.pipeline.export import export_job
 from historical_ocr.pipeline.run_job import load_manifest, run_job
@@ -33,18 +30,21 @@ def cmd_run(args: argparse.Namespace) -> int:
         url=args.url,
         limit=args.limit,
         inputs=inputs or None,
-        mode=args.mode,
-        prompt=Path(args.prompt) if args.prompt else None,
-        fingerprint=args.fingerprint,
+        quality=args.quality,
         clean=args.clean,
         print_doc_type=args.print_doc_type,
         ocr_combination=args.ocr_combination,
         publication_year=args.publication_year,
         print_language=args.print_language,
-        extract_figures=args.extract_figures,
         fast=args.fast,
+        rules_only=args.rules_only,
+        low_latency=args.low_latency,
         symbol_filter=args.symbol_filter,
         glyph_heatmap=args.glyph_heatmap,
+        review_conf_threshold=args.review_conf_threshold,
+        fingerprint=args.fingerprint,
+        extract_figures=args.extract_figures,
+        deskew=args.deskew,
         log_fn=lambda m: print(m, file=sys.stderr, flush=True),
     )
     print(json.dumps(manifest.export, indent=2))
@@ -89,16 +89,10 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 def cmd_tools(_args: argparse.Namespace) -> int:
     settings = Settings()
-    model_path = (
-        settings.page_cnn_model.expanduser().resolve() if settings.page_cnn_model else None
-    )
     tools = {
         "tesseract (print OCR)": tess_backend.available(),
         "bib-ocr (PDF bibliography cascade)": bib_backend.available(),
-        "transcriber-shell (manuscript)": shell_backend.available(),
-        "manuscript-fingerprint (type case)": fp_backend.available(),
         "ocr-cleanup / Underwood rules (print clean)": underwood_backend.available(),
-        "page CNN (auto routing)": cnn_backend.available(model_path),
     }
     for name, ok in tools.items():
         print(f"{'✓' if ok else '✗'} {name}")
@@ -108,8 +102,6 @@ def cmd_tools(_args: argparse.Namespace) -> int:
         if missing:
             print(f"  → recommended packs not installed: {', '.join(missing)}")
     print(f"  → {bib_backend.describe()}")
-    if model_path:
-        print(f"  → {cnn_backend.describe(model_path)}")
     return 0
 
 
@@ -233,10 +225,19 @@ def cmd_cnn_fetch(args: argparse.Namespace) -> int:
             return 1
         extra.append((Path(path).expanduser().resolve(), label))  # type: ignore[arg-type]
 
+    newspaper_gt_dir = (
+        Path(args.newspaper_gt).expanduser().resolve() if getattr(args, "newspaper_gt", None) else None
+    )
+    newspaper_sources = getattr(args, "newspaper_source", None)
+    if newspaper_gt_dir and not newspaper_sources:
+        newspaper_sources = ["chronicling-america"]
+
     counts = fetch_sources(
         out,
         hf_sources=args.source,
         ocrdatasets_sources=args.ocrdatasets,
+        newspaper_gt_sources=newspaper_sources,
+        newspaper_gt_dir=newspaper_gt_dir,
         remote_gt_sources=args.akdeniz_gt,
         ocrdatasets_root=Path(args.ocrdatasets_root).expanduser().resolve()
         if args.ocrdatasets_root
@@ -254,20 +255,292 @@ def cmd_cnn_fetch(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_cnn_predict(args: argparse.Namespace) -> int:
-    settings = Settings()
-    model_path = (
-        settings.page_cnn_model.expanduser().resolve() if settings.page_cnn_model else None
+def cmd_gt_eval(args: argparse.Namespace) -> int:
+    from historical_ocr.ml.gt_eval import eval_newspaper_gt
+
+    report = eval_newspaper_gt(
+        Path(args.gt_dir).expanduser().resolve(),
+        split=args.split,
+        limit=args.limit,
+        out_dir=Path(args.out).expanduser().resolve() if args.out else None,
+        preset=args.preset,
+        log_fn=lambda m: print(m, file=sys.stderr),
     )
+    print(json.dumps(
+        {
+            "preset": report.get("preset"),
+            "scored": report["scored"],
+            "mean_cer": report["mean_cer"],
+            "mean_wer": report["mean_wer"],
+            "by_doc_type": report.get("by_doc_type"),
+        },
+        indent=2,
+    ))
+    return 0 if report["scored"] else 1
+
+
+def cmd_gt_validate(args: argparse.Namespace) -> int:
+    from historical_ocr.ml.gt_eval import validate_newspaper_accuracy
+
+    summary = validate_newspaper_accuracy(
+        Path(args.gt_dir).expanduser().resolve(),
+        split=args.split,
+        limit=args.limit,
+        log_fn=lambda m: print(m, file=sys.stderr),
+    )
+    print(json.dumps(summary, indent=2))
+    return 0 if any(p.get("scored") for p in summary.get("presets", {}).values()) else 1
+
+
+def cmd_gt_submit(args: argparse.Namespace) -> int:
+    from historical_ocr.ml.user_corrections import submit_correction, submit_from_job
+
+    corpus = Path(args.corpus).expanduser().resolve()
+    if args.job:
+        settings = Settings()
+        saved = submit_from_job(
+            args.job,
+            jobs_dir=settings.jobs_dir,
+            corpus=corpus,
+            corrected_path=Path(args.corrected).expanduser().resolve() if args.corrected else None,
+            split=args.split,
+            log_fn=lambda m: print(m, file=sys.stderr),
+        )
+        print(json.dumps({"submitted": len(saved), "corpus": str(corpus)}, indent=2))
+        return 0
+
+    if not args.image or not args.corrected or not args.raw:
+        print("error: provide --job JOB or (--image, --raw, --corrected)", file=sys.stderr)
+        return 1
+    dest = submit_correction(
+        corpus,
+        record_id=args.id or Path(args.image).stem,
+        image_src=Path(args.image).expanduser().resolve(),
+        raw_text=Path(args.raw).read_text(encoding="utf-8"),
+        corrected_text=Path(args.corrected).read_text(encoding="utf-8"),
+        split=args.split,
+        meta={"source": "cli"},
+    )
+    print(json.dumps({"submitted": 1, "text": str(dest), "corpus": str(corpus)}, indent=2))
+    return 0
+
+
+def cmd_gt_tune(args: argparse.Namespace) -> int:
+    from historical_ocr.ml.user_corrections import tune_corpus
+
+    stats = tune_corpus(
+        Path(args.corpus).expanduser().resolve(),
+        min_count=args.min_count,
+        log_fn=lambda m: print(m, file=sys.stderr),
+    )
+    print(json.dumps(stats, indent=2))
+    return 0 if stats["rules"] else 1
+
+
+def cmd_gt_template(args: argparse.Namespace) -> int:
+    """Copy production export .txt to .corrected.txt for human editing."""
+    from historical_ocr.lib.export_names import production_paths, resolve_export_basename
+    from historical_ocr.models.manifest import JobManifest
+
+    settings = Settings()
+    job_root = (settings.jobs_dir / args.job).expanduser().resolve()
+    manifest = JobManifest.model_validate_json((job_root / "manifest.json").read_text(encoding="utf-8"))
+    basename = resolve_export_basename(manifest)
+    paths = production_paths(job_root / "export", basename)
+    src = paths["txt"]
+    if not src.is_file():
+        print(f"error: missing export text {src}", file=sys.stderr)
+        return 1
+    dest = src.with_name(f"{basename}.corrected.txt")
+    if dest.is_file() and not args.force:
+        print(str(dest))
+        return 0
+    dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+    print(str(dest))
+    return 0
+
+
+def cmd_newspaper_prepare(args: argparse.Namespace) -> int:
+    from historical_ocr.ml.newspaper_train import CorpusSource, prepare_training_corpus
+
+    sources = [
+        CorpusSource("chronicling_america", Path(args.ca), "ca"),
+        CorpusSource("user_corrections", Path(args.user), "user"),
+    ]
+    for item in args.extra or []:
+        name, _, path = item.partition(":")
+        if not name or not path:
+            print(f"error: bad --extra {item!r}", file=sys.stderr)
+            return 1
+        sources.append(CorpusSource(name, Path(path), name.replace("/", "_")[:12]))
+
+    manifest = prepare_training_corpus(
+        Path(args.out).expanduser().resolve(),
+        sources=sources,
+        log_fn=lambda m: print(m, file=sys.stderr),
+    )
+    print(json.dumps(manifest["counts"], indent=2))
+    return 0 if manifest["counts"]["train"] else 1
+
+
+def cmd_newspaper_train(args: argparse.Namespace) -> int:
+    from historical_ocr.ml.newspaper_train import train_newspaper_ocr
+
+    meta = train_newspaper_ocr(
+        Path(args.data).expanduser().resolve(),
+        Path(args.out).expanduser().resolve(),
+        patience=args.patience,
+        eval_limit=args.eval_limit,
+        log_fn=lambda m: print(m, file=sys.stderr),
+    )
+    print(json.dumps(meta, indent=2))
+    return 0
+
+
+def cmd_newspaper_eval(args: argparse.Namespace) -> int:
+    args.gt_dir = args.data
+    return cmd_gt_eval(args)
+
+
+def cmd_tess_sources(_args: argparse.Namespace) -> int:
+    from historical_ocr.ml.tesseract_train import list_sources
+
+    for spec in list_sources():
+        print(
+            f"{spec.source_id:28}  {spec.kind:20}  "
+            f"limit={spec.default_limit:5}  {spec.print_doc_type or '—':22}  "
+            f"{spec.notes}",
+        )
+    return 0
+
+
+def cmd_tess_fetch(args: argparse.Namespace) -> int:
+    from historical_ocr.ml.tesseract_train import fetch_sources
+
+    hf = args.source if args.source else None
+    local = args.local if args.local else None
+    inst_filters: dict | None = None
+    if any(
+        getattr(args, k, None) is not None
+        for k in ("min_ocr_score", "min_year", "max_year", "language")
+    ):
+        inst_filters = {}
+        if args.min_ocr_score is not None:
+            inst_filters["min_ocr_score"] = args.min_ocr_score
+        if args.min_year is not None:
+            inst_filters["min_year"] = args.min_year
+        if args.max_year is not None:
+            inst_filters["max_year"] = args.max_year
+        if args.language is not None:
+            inst_filters["language_gen"] = args.language
+    counts = fetch_sources(
+        Path(args.out).expanduser().resolve(),
+        hf_sources=hf,
+        local_sources=local,
+        limit=args.limit,
+        institutional_filters=inst_filters,
+        archive_org=getattr(args, "archive_org", False),
+        max_pages_per_volume=getattr(args, "max_pages", 30),
+        hf_page_text=not getattr(args, "no_hf_text", False),
+        log_fn=lambda m: print(m, file=sys.stderr),
+    )
+    print(json.dumps({"out": args.out, "counts": counts}, indent=2))
+    return 0 if any(counts.values()) else 1
+
+
+def cmd_tess_prepare(args: argparse.Namespace) -> int:
+    from historical_ocr.ml.tesseract_train import prepare_tesstrain_ground_truth
+
+    stats = prepare_tesstrain_ground_truth(
+        Path(args.corpus).expanduser().resolve(),
+        Path(args.corpus).expanduser().resolve(),
+        model_name=args.model,
+        log_fn=lambda m: print(m, file=sys.stderr),
+    )
+    print(json.dumps(stats, indent=2))
+    return 0 if stats.get("line_pairs", 0) >= 100 else 1
+
+
+def cmd_tess_train(args: argparse.Namespace) -> int:
+    from historical_ocr.ml.tesseract_train import train_tesseract_model
+
+    stats = train_tesseract_model(
+        Path(args.data).expanduser().resolve(),
+        Path(args.out).expanduser().resolve(),
+        model_name=args.model,
+        max_iterations=args.max_iterations,
+        log_fn=lambda m: print(m, file=sys.stderr),
+    )
+    print(json.dumps(stats, indent=2))
+    return 0 if not stats.get("skipped") else 1
+
+
+def cmd_tess_train_gt(args: argparse.Namespace) -> int:
+    """Fine-tune from an external flat ground-truth/ dir (e.g. transcription-shell pre1800)."""
+    from historical_ocr.ml.tesseract_train import load_registry, train_from_ground_truth_dir
+
+    reg = load_registry()
+    pre1800 = reg.get("pre1800") or {}
+    model = args.model or str(pre1800.get("model_name", "lat_pre1800"))
+    start = args.start_model or str(pre1800.get("start_model", "Fraktur"))
+    iters = args.max_iterations or int(pre1800.get("max_iterations", 100_000))
+    ratio = args.ratio_train if args.ratio_train is not None else float(pre1800.get("ratio_train", 0.99))
+
+    stats = train_from_ground_truth_dir(
+        Path(args.ground_truth).expanduser().resolve(),
+        Path(args.out).expanduser().resolve(),
+        model_name=model,
+        start_model=start,
+        max_iterations=iters,
+        ratio_train=ratio,
+        tesstrain_root=Path(args.tesstrain).expanduser().resolve() if args.tesstrain else None,
+        tessdata_dir=Path(args.tessdata).expanduser().resolve() if args.tessdata else None,
+        log_fn=lambda m: print(m, file=sys.stderr),
+    )
+    print(json.dumps(stats, indent=2))
+    return 0 if not stats.get("skipped") else 1
+
+
+def cmd_gt_fetch(args: argparse.Namespace) -> int:
+    from historical_ocr.ml.newspaper_gt import CHRONAM_REPO, fetch_newspaper_gt
+
+    shards = None
+    if args.shard is not None:
+        if not 0 <= args.shard <= 3:
+            print("error: --shard must be 0-3", file=sys.stderr)
+            return 1
+        shards = [f"data/train-{args.shard:05d}-of-00004.parquet"]
+
+    print(f"source: {CHRONAM_REPO}", file=sys.stderr)
+    stats = fetch_newspaper_gt(
+        Path(args.out).expanduser().resolve(),
+        limit=args.limit,
+        val_ratio=args.val_ratio,
+        seed=args.seed,
+        skip_images=args.text_only,
+        shards=shards,
+        log_fn=lambda m: print(m, file=sys.stderr),
+    )
+    print(
+        f"saved {stats['saved']} ({stats['train']} train, {stats['val']} val); "
+        f"on disk: {stats['total_train']} train, {stats['total_val']} val",
+    )
+    return 0
+
+
+def cmd_cnn_predict(args: argparse.Namespace) -> int:
+    from historical_ocr.backends import page_cnn as cnn_backend
+
+    model_path = Path(args.model).expanduser().resolve()
     if not cnn_backend.available(model_path):
-        print("error: set HISTORICAL_OCR_PAGE_CNN_MODEL to a trained .pt file", file=sys.stderr)
+        print(f"error: CNN model not found: {model_path}", file=sys.stderr)
         return 1
     for image in args.image:
         path = Path(image).expanduser().resolve()
         label, score = cnn_backend.classify_page(
             path,
-            model_path=model_path,  # type: ignore[arg-type]
-            threshold=settings.page_cnn_threshold,
+            model_path=model_path,
+            threshold=args.threshold,
         )
         print(f"{path.name}\t{label}\t{score:.4f}")
     return 0
@@ -365,10 +638,7 @@ def cmd_ecosystem(_args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="historical-ocr",
-        description=(
-            "Produce computational-ready text: vendored fetch/OCR/export plus "
-            "optional transcriber-shell and manuscript-fingerprint CLIs."
-        ),
+        description="Produce computational-ready text from historical newspapers and print.",
     )
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
@@ -380,14 +650,10 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("-i", "--input", action="append", help="Local PDF or image path")
     run.add_argument("--limit", type=int, default=None, help="Max assets when using --url")
     run.add_argument(
-        "--mode",
-        choices=["auto", "manuscript", "print"],
-        default="auto",
-        help="Route pages to transcription-shell or print OCR",
-    )
-    run.add_argument(
-        "--prompt",
-        help="Transcription-protocol prompt YAML (required for manuscript mode)",
+        "--quality",
+        choices=["free", "medium", "high"],
+        default=None,
+        help="Quality tier (default medium — glyph filter + tune rules; overrides when no --fast/--low-latency)",
     )
     run.add_argument(
         "--print-doc-type",
@@ -414,14 +680,8 @@ def build_parser() -> argparse.ArgumentParser:
             "tesseract_only",
             "tesseract_then_clean",
             "pdf_text_first",
-            "shell_print",
         ],
-        help="Print OCR fork (mirrors transcription-shell htr_combination)",
-    )
-    run.add_argument(
-        "--fingerprint",
-        action="store_true",
-        help="Run manuscript-fingerprint scan on PDF sources",
+        help="Print OCR pipeline variant",
     )
     run.add_argument(
         "--clean",
@@ -430,19 +690,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="After print OCR, run Ted Underwood rules via ocr-cleanup (default on)",
     )
     run.add_argument(
-        "--extract-figures",
-        action="store_true",
-        help=(
-            "After manuscript transcription, detect embedded images (DocLayNet), "
-            "save crops, and insert [fig:id] protocol markers into YAML"
-        ),
-    )
-    run.add_argument(
         "--fast",
         action="store_true",
         help=(
             "Speed-first: smaller images, text-only Tesseract (no layout scan), "
             "skip Underwood clean + internal per-page exports + TEI facsimile"
+        ),
+    )
+    run.add_argument(
+        "--rules-only",
+        action="store_true",
+        help=(
+            "LLM-independent print path: Tesseract + glyph/symbol filter + "
+            "Underwood rules (ignores HISTORICAL_OCR_CLEAN_LLM)"
+        ),
+    )
+    run.add_argument(
+        "--low-latency",
+        action="store_true",
+        help=(
+            "Speed-first rules-only: text-only Tesseract, Underwood clean, "
+            "orphan-line drop; skips glyph crops and review PNG (recommended for batches)"
         ),
     )
     run.add_argument(
@@ -459,9 +727,33 @@ def build_parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         default=None,
         help=(
-            "Write {basename}.review.png + .review.json beside production TXT "
-            "when glyph filtering drops marks (default on; off in --fast)"
+            "Write {basename}.review.png + .review.json for problem pages only "
+            "(glyph drops or lines below --review-conf-threshold; default on)"
         ),
+    )
+    run.add_argument(
+        "--review-conf-threshold",
+        type=float,
+        default=None,
+        metavar="CONF",
+        help="Emit review PNG when any OCR line confidence is below CONF (default 65)",
+    )
+    run.add_argument(
+        "--fingerprint",
+        action="store_true",
+        help="Run manuscript-fingerprint type-case scan on PDF sources (routing hint)",
+    )
+    run.add_argument(
+        "--extract-figures",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Detect illustrations/tables and write [fig:id] markers (default on for medium/high)",
+    )
+    run.add_argument(
+        "--deskew",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Straighten page rotation before OCR (default on for medium/high)",
     )
     run.set_defaults(func=cmd_run)
 
@@ -559,6 +851,15 @@ def build_parser() -> argparse.ArgumentParser:
     cnn_fetch.add_argument("--source", action="append", help="HF source id from cnn sources")
     cnn_fetch.add_argument("--ocrdatasets", action="append", help="OCRDatasets catalog id")
     cnn_fetch.add_argument("--akdeniz-gt", action="append", help="Akdeniz remote_gt id")
+    cnn_fetch.add_argument(
+        "--newspaper-gt",
+        help="Corpus from gt fetch (e.g. data/newspaper_gt); harvests chronicling-america by default",
+    )
+    cnn_fetch.add_argument(
+        "--newspaper-source",
+        action="append",
+        help="Newspaper GT registry id (default chronicling-america when --newspaper-gt set)",
+    )
     cnn_fetch.add_argument("--ocrdatasets-root", help="Path to OCRDatasets checkout or data parent")
     cnn_fetch.add_argument("--akdeniz-home", help="Akdeniz $HOME for --akdeniz-gt harvest")
     cnn_fetch.add_argument(
@@ -571,9 +872,198 @@ def build_parser() -> argparse.ArgumentParser:
     cnn_fetch.add_argument("--all-hf", action="store_true", help="Fetch all HF sources in registry")
     cnn_fetch.set_defaults(func=cmd_cnn_fetch)
 
-    cnn_pred = cnn_sub.add_parser("predict", help="Classify page image(s)")
+    cnn_pred = cnn_sub.add_parser("predict", help="Classify page image(s) (legacy print/manuscript CNN)")
     cnn_pred.add_argument("image", nargs="+")
+    cnn_pred.add_argument("--model", default="models/page_cnn.pt")
+    cnn_pred.add_argument("--threshold", type=float, default=0.5)
     cnn_pred.set_defaults(func=cmd_cnn_predict)
+
+    gt = sub.add_parser("gt", help="Newspaper OCR ground-truth corpora")
+    gt_sub = gt.add_subparsers(dest="gt_command", required=True)
+
+    gt_tpl = gt_sub.add_parser(
+        "template",
+        help="Copy export .txt → .corrected.txt for human editing",
+    )
+    gt_tpl.add_argument("job", help="Job id (jobs/<job>/)")
+    gt_tpl.add_argument("--force", action="store_true", help="Overwrite existing .corrected.txt")
+    gt_tpl.set_defaults(func=cmd_gt_template)
+
+    gt_submit = gt_sub.add_parser(
+        "submit",
+        help="Import human-corrected text into data/user_gt tuning corpus",
+    )
+    gt_submit.add_argument("--corpus", default="data/user_gt")
+    gt_submit.add_argument("--job", help="Job id — reads export/*.corrected.txt or --corrected")
+    gt_submit.add_argument("--corrected", help="Path to corrected text file")
+    gt_submit.add_argument("--image", help="Page image (standalone submit)")
+    gt_submit.add_argument("--raw", help="Raw OCR text file (standalone submit)")
+    gt_submit.add_argument("--id", help="Record id for standalone submit")
+    gt_submit.add_argument("--split", choices=["train", "val"], default="train")
+    gt_submit.set_defaults(func=cmd_gt_submit)
+
+    gt_tune = gt_sub.add_parser(
+        "tune",
+        help="Mine replacement rules from submitted corrections → tuned_rules.json",
+    )
+    gt_tune.add_argument("--corpus", default="data/user_gt")
+    gt_tune.add_argument("--min-count", type=int, default=1)
+    gt_tune.set_defaults(func=cmd_gt_tune)
+
+    gt_fetch = gt_sub.add_parser(
+        "fetch",
+        help="Download Chronicling America pages + OCR text (train/val split)",
+    )
+    gt_fetch.add_argument("--out", default="data/newspaper_gt")
+    gt_fetch.add_argument("--limit", type=int, default=500)
+    gt_fetch.add_argument("--val-ratio", type=float, default=0.1)
+    gt_fetch.add_argument("--seed", type=int, default=42)
+    gt_fetch.add_argument(
+        "--text-only",
+        action="store_true",
+        help="Save OCR text + metadata only (skip page images)",
+    )
+    gt_fetch.add_argument("--shard", type=int, default=None, help="Parquet shard 0-3 only")
+    gt_fetch.set_defaults(func=cmd_gt_fetch)
+
+    gt_eval = gt_sub.add_parser(
+        "eval",
+        help="Rules-only OCR on GT split + CER/WER vs reference text (no LLM)",
+    )
+    gt_eval.add_argument("--gt-dir", default="data/newspaper_gt")
+    gt_eval.add_argument("--split", choices=["train", "val", "all"], default="val")
+    gt_eval.add_argument("--limit", type=int, default=None)
+    gt_eval.add_argument(
+        "--preset",
+        choices=["free", "medium"],
+        default="medium",
+        help="Quality preset to benchmark (default medium = production)",
+    )
+    gt_eval.add_argument("--out", help="Eval run directory (default: <gt-dir>/eval/<timestamp>)")
+    gt_eval.set_defaults(func=cmd_gt_eval)
+
+    gt_validate = gt_sub.add_parser(
+        "validate",
+        help="Compare free vs medium on GT split and pick best CER",
+    )
+    gt_validate.add_argument("--gt-dir", default="data/newspaper_gt")
+    gt_validate.add_argument("--split", choices=["train", "val", "all"], default="val")
+    gt_validate.add_argument("--limit", type=int, default=None)
+    gt_validate.set_defaults(func=cmd_gt_validate)
+
+    np = sub.add_parser("newspaper", help="Newspaper OCR training (Kraken + GT corpora)")
+    np_sub = np.add_subparsers(dest="newspaper_command", required=True)
+
+    np_prep = np_sub.add_parser("prepare", help="Merge CA GT + user corrections → data/newspaper_ocr")
+    np_prep.add_argument("--out", default="data/newspaper_ocr")
+    np_prep.add_argument("--ca", default="data/newspaper_gt")
+    np_prep.add_argument("--user", default="data/user_gt")
+    np_prep.add_argument("--extra", action="append", metavar="NAME:PATH")
+    np_prep.set_defaults(func=cmd_newspaper_prepare)
+
+    np_train = np_sub.add_parser("train", help="Train Kraken model (requires ketos on PATH)")
+    np_train.add_argument("--data", default="data/newspaper_ocr")
+    np_train.add_argument("--out", default="models/newspaper_ocr.mlmodel")
+    np_train.add_argument("--epochs", type=int, default=30)
+    np_train.add_argument("--batch-size", type=int, default=8)
+    np_train.set_defaults(func=cmd_newspaper_train)
+
+    np_eval = np_sub.add_parser("eval", help="Eval rules-only OCR vs prepared val split")
+    np_eval.add_argument("--data", default="data/newspaper_ocr")
+    np_eval.add_argument("--split", choices=["train", "val", "all"], default="val")
+    np_eval.add_argument("--limit", type=int, default=None)
+    np_eval.add_argument("--out", help="Eval run directory")
+    np_eval.set_defaults(func=cmd_newspaper_eval)
+
+    tess_train = sub.add_parser("tess", help="Tesseract LSTM fine-tuning (HF corpora + tesstrain)")
+    tess_sub = tess_train.add_subparsers(dest="tess_command", required=True)
+
+    tess_src = tess_sub.add_parser("sources", help="List HF/local tess train corpora")
+    tess_src.set_defaults(func=cmd_tess_sources)
+
+    tess_fetch = tess_sub.add_parser(
+        "fetch",
+        help="Download HF/local page+text into tess corpus (or metadata catalog for institutional-books)",
+    )
+    tess_fetch.add_argument("--out", default="data/tesseract_train")
+    tess_fetch.add_argument(
+        "--source",
+        action="append",
+        help="HF source id (default: chronicling-america, newspaper-ocr-gold, ocr-quality)",
+    )
+    tess_fetch.add_argument("--local", action="append", help="Local corpus id (newspaper_gt, user_gt)")
+    tess_fetch.add_argument("--limit", type=int, default=None, help="Cap per source")
+    tess_fetch.add_argument(
+        "--min-ocr-score",
+        type=float,
+        default=None,
+        metavar="N",
+        help="institutional-books: min Google + OCRoscope score (default 70)",
+    )
+    tess_fetch.add_argument(
+        "--min-year",
+        type=int,
+        default=None,
+        help="institutional-books: earliest publication year (default 1800)",
+    )
+    tess_fetch.add_argument(
+        "--max-year",
+        type=int,
+        default=None,
+        help="institutional-books: latest publication year (default 1920)",
+    )
+    tess_fetch.add_argument(
+        "--language",
+        default=None,
+        help="institutional-books: ISO 639-3 language_gen filter (default eng)",
+    )
+    tess_fetch.add_argument(
+        "--archive-org",
+        action="store_true",
+        help=(
+            "institutional-books: resolve Internet Archive IIIF scans for catalog "
+            "rows and download page JPEGs into tess corpus pages/"
+        ),
+    )
+    tess_fetch.add_argument(
+        "--max-pages",
+        type=int,
+        default=30,
+        metavar="N",
+        help="Max IA page images per volume when using --archive-org (default 30)",
+    )
+    tess_fetch.add_argument(
+        "--no-hf-text",
+        action="store_true",
+        help="institutional-books --archive-org: skip HF text_by_page GT (images only)",
+    )
+    tess_fetch.set_defaults(func=cmd_tess_fetch)
+
+    tess_prep = tess_sub.add_parser("prepare", help="Extract line PNG+.gt.txt for tesstrain")
+    tess_prep.add_argument("--corpus", default="data/tesseract_train")
+    tess_prep.add_argument("--model", default=None, help="Model name (default histnews)")
+    tess_prep.set_defaults(func=cmd_tess_prepare)
+
+    tess_run = tess_sub.add_parser("train", help="Run tesstrain make training")
+    tess_run.add_argument("--data", default="data/tesseract_train")
+    tess_run.add_argument("--out", default="models/histnews.traineddata")
+    tess_run.add_argument("--model", default=None)
+    tess_run.add_argument("--max-iterations", type=int, default=None)
+    tess_run.set_defaults(func=cmd_tess_train)
+
+    tess_gt = tess_sub.add_parser(
+        "train-gt",
+        help="Fine-tune from flat ground-truth/*.png + *.gt.txt (transcription-shell pre1800)",
+    )
+    tess_gt.add_argument("--ground-truth", required=True, help="Directory of line PNG + .gt.txt pairs")
+    tess_gt.add_argument("--out", default="models/lat_pre1800.traineddata")
+    tess_gt.add_argument("--model", default=None, help="Output lang id (default from pre1800 registry)")
+    tess_gt.add_argument("--start-model", default=None, help="Base traineddata stem (default Fraktur)")
+    tess_gt.add_argument("--max-iterations", type=int, default=None)
+    tess_gt.add_argument("--ratio-train", type=float, default=None)
+    tess_gt.add_argument("--tesstrain", default=None, help="Path to tesstrain clone")
+    tess_gt.add_argument("--tessdata", default=None, help="Directory with START_MODEL.traineddata")
+    tess_gt.set_defaults(func=cmd_tess_train_gt)
 
     return p
 
