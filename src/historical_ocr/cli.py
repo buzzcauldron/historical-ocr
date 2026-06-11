@@ -46,6 +46,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         extract_figures=args.extract_figures,
         deskew=args.deskew,
         overlaid_ocr=args.overlaid_ocr,
+        text_slice_only=args.text_slice_only,
+        text_slice_include_ads=args.include_ads,
+        text_slice_include_figures=args.include_figures,
         log_fn=lambda m: print(m, file=sys.stderr, flush=True),
     )
     print(json.dumps(manifest.export, indent=2))
@@ -755,6 +758,24 @@ def build_parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         default=None,
         help="Straighten page rotation before OCR (default on for medium/high)",
+    )
+    run.add_argument(
+        "--text-slice-only",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="OCR only prose/list sections from ink layout; skip ads/illustrations by default",
+    )
+    run.add_argument(
+        "--include-ads",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="When text slicing, also keep advertisement/header-like regions",
+    )
+    run.add_argument(
+        "--include-figures",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="When text slicing, also keep illustration/photo regions",
     )
     run.add_argument(
         "--overlaid-ocr",

@@ -1,0 +1,17 @@
+{
+  "record_id": "sn82014782_1789-03-14_p1_e1",
+  "split": "train",
+  "lccn": "sn82014782",
+  "newspaper_title": "The Kentucky gazette",
+  "place_of_publication": "Lexington [Ky.]",
+  "issue_date": "1789-03-14",
+  "edition_order": "1",
+  "page": "1",
+  "web_url": "https://www.loc.gov/item/sn82014782/1789-03-14/ed-1/",
+  "ocr_url": "https://tile.loc.gov/storage-services/service/ndnp/kyu/batch_kyu_dachshund_ver04/data/sn82014782/print/1789031401/0002.xml",
+  "thumbnail_url": "https://tile.loc.gov/image-services/iiif/service:ndnp:kyu:batch_kyu_dachshund_ver04:data:sn82014782:print:1789031401:0002/full/pct:6.25/0/default.jpg",
+  "jpeg2000_url": "https://tile.loc.gov/storage-services/service/ndnp/kyu/batch_kyu_dachshund_ver04/data/sn82014782/print/1789031401/0002.jp2",
+  "pdf_url": "https://tile.loc.gov/storage-services/service/ndnp/kyu/batch_kyu_dachshund_ver04/data/sn82014782/print/1789031401/0002.pdf",
+  "image_url": "https://tile.loc.gov/image-services/iiif/service:ndnp:kyu:batch_kyu_dachshund_ver04:data:sn82014782:print:1789031401:0002/full/full/0/default.jpg",
+  "source_record_create_date": "2024-06-13"
+}

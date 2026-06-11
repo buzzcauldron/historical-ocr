@@ -123,6 +123,18 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="HISTORICAL_OCR_OVERLAID_OCR",
     )
+    text_slice_only: bool = Field(
+        default=False,
+        validation_alias="HISTORICAL_OCR_TEXT_SLICE_ONLY",
+    )
+    text_slice_include_ads: bool = Field(
+        default=False,
+        validation_alias="HISTORICAL_OCR_TEXT_SLICE_INCLUDE_ADS",
+    )
+    text_slice_include_figures: bool = Field(
+        default=False,
+        validation_alias="HISTORICAL_OCR_TEXT_SLICE_INCLUDE_FIGURES",
+    )
     export_internal: bool = Field(
         default=True,
         validation_alias="HISTORICAL_OCR_EXPORT_INTERNAL",

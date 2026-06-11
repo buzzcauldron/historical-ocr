@@ -55,6 +55,9 @@ def run_job(
     glyph_heatmap: bool | None = None,
     review_conf_threshold: float | None = None,
     overlaid_ocr: bool | None = None,
+    text_slice_only: bool | None = None,
+    text_slice_include_ads: bool | None = None,
+    text_slice_include_figures: bool | None = None,
     log_fn: Callable[[str], None] | None = None,
     **_: object,
 ) -> JobManifest:
@@ -98,6 +101,12 @@ def run_job(
         updates["deskew_enabled"] = deskew
     if overlaid_ocr is not None:
         updates["overlaid_ocr_enabled"] = overlaid_ocr
+    if text_slice_only is not None:
+        updates["text_slice_only"] = text_slice_only
+    if text_slice_include_ads is not None:
+        updates["text_slice_include_ads"] = text_slice_include_ads
+    if text_slice_include_figures is not None:
+        updates["text_slice_include_figures"] = text_slice_include_figures
     if updates:
         s = s.model_copy(update=updates)
     job = JobPaths((s.jobs_dir / job_id).expanduser().resolve())

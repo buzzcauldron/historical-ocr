@@ -1,0 +1,22 @@
+print-ocr: BlackNews_19700110_002 [tesseract_then_clean] doc_type=twentieth_century
+clean: BlackNews_19700110_002 (Underwood rules)
+{
+  "document_txt": "export/BlackNews_19700110_002.txt",
+  "document_xml": "export/BlackNews_19700110_002.xml",
+  "text_review_json": "export/BlackNews_19700110_002.review.json",
+  "text_review_heatmap": "export/BlackNews_19700110_002.review.png",
+  "delivery_json": "export/BlackNews_19700110_002.delivery.json",
+  "checksums": "export/BlackNews_19700110_002.checksums.sha256",
+  "figures_dir": "export/_internal/figures",
+  "corpus_txt": "export/BlackNews_19700110_002.txt",
+  "internal_txt_dir": "export/_internal/txt",
+  "internal_xml_dir": "export/_internal/xml",
+  "internal_tei_dir": "export/_internal/tei",
+  "corpus_jsonl": "export/_internal/BlackNews_19700110_002.corpus.jsonl",
+  "txt_dir": "export/_internal/txt",
+  "xml_dir": "export/_internal/xml",
+  "tei_dir": "export/_internal/tei"
+}
+real 6.29
+user 5.54
+sys 0.30

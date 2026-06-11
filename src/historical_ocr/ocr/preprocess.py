@@ -59,6 +59,10 @@ def preprocess_for_ocr(image: Path, options: dict[str, Any]) -> Image.Image:
         out = ImageOps.invert(out.convert("RGB"))
     if options.get("autocontrast"):
         out = ImageOps.autocontrast(out)
+    if options.get("denoise"):
+        out = out.filter(ImageFilter.MedianFilter(size=3))
+    if options.get("unsharp"):
+        out = out.filter(ImageFilter.UnsharpMask(radius=1.2, percent=150, threshold=3))
     if options.get("sharpen"):
         out = out.filter(ImageFilter.SHARPEN)
     contrast = options.get("contrast")

@@ -67,4 +67,14 @@ def test_medium_enables_spot_llm_with_key() -> None:
     s, prov, _ = apply_quality_tier(Settings(), "medium", api_key="AIzaSy_test_key_12345")
     assert prov == "gemini"
     assert s.damage_llm_enabled is True
+    assert s.handwriting_gemini_enabled is False
+    assert s.damage_llm_max_lines == 8
     assert s.clean_llm is None
+
+
+def test_high_caps_handwriting_gemini_regions() -> None:
+    s, prov, eff = apply_quality_tier(Settings(), "high", api_key="AIzaSy_test_key_12345")
+    assert eff == "high"
+    assert prov == "gemini"
+    assert s.handwriting_gemini_enabled is True
+    assert s.handwriting_gemini_max_regions == 3

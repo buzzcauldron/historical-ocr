@@ -50,6 +50,59 @@ def test_merge_column_lines_reading_order() -> None:
     assert merged.lines[1].left == 310
 
 
+def test_merge_column_major_same_y() -> None:
+    """Column-major order: all col-0 lines before col-1 even at the same y."""
+    left = LayoutOcrResult(
+        lines=[
+            OcrLine(1, "left-top", 10, 50, 80, 12, 90.0),
+            OcrLine(2, "left-bottom", 10, 120, 80, 12, 90.0),
+        ],
+        page_width=300,
+        page_height=400,
+        full_text="left-top\nleft-bottom",
+    )
+    right = LayoutOcrResult(
+        lines=[
+            OcrLine(1, "right-top", 10, 50, 80, 12, 90.0),
+            OcrLine(2, "right-bottom", 10, 120, 80, 12, 90.0),
+        ],
+        page_width=300,
+        page_height=400,
+        full_text="right-top\nright-bottom",
+    )
+    merged = merge_region_results(
+        [
+            (RegionBox(left=0, top=0, width=300, height=400, sort_col=0), left),
+            (RegionBox(left=300, top=0, width=300, height=400, sort_col=1), right),
+        ],
+        page_width=600,
+        page_height=400,
+    )
+    assert [l.text for l in merged.lines] == [
+        "left-top",
+        "left-bottom",
+        "right-top",
+        "right-bottom",
+    ]
+
+
+def test_merge_rejects_lines_outside_region_x() -> None:
+    """Lines that do not overlap the region horizontally are dropped."""
+    spill = LayoutOcrResult(
+        lines=[OcrLine(1, "spillover", 250, 40, 200, 12, 90.0)],
+        page_width=300,
+        page_height=400,
+        full_text="spillover",
+    )
+    merged = merge_region_results(
+        [(RegionBox(left=0, top=0, width=200, height=400, sort_col=0), spill)],
+        page_width=300,
+        page_height=400,
+        crop_origins=[(0, 0)],
+    )
+    assert merged.lines == []
+
+
 def test_twentieth_century_enables_column_ocr() -> None:
     from historical_ocr.document_types.print_types import load_print_doc_type
 

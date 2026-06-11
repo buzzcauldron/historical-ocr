@@ -86,6 +86,7 @@ def test_transcribe_partial_handwriting_mock(tmp_path: Path) -> None:
         0.5,
         ("mixed",),
         extent="partial",
+        manuscript_score=0.4,
     )
     settings = Settings.model_construct(
         google_api_key="test-key",
@@ -119,6 +120,28 @@ def test_full_extent_does_not_call_gemini(tmp_path: Path) -> None:
     assessment = HandwritingAssessment(True, 0.9, ("full page",), extent="full")
     settings = Settings.model_construct(google_api_key="test-key", handwriting_gemini_enabled=True)
     layout = _layout()
+
+    with patch(
+        "historical_ocr.lib.handwriting_gemini.build_gemini_model",
+        return_value=MagicMock(),
+    ) as build:
+        out = transcribe_partial_handwriting(layout, image, assessment, settings=settings)
+    build.assert_not_called()
+    assert out.full_text == layout.full_text
+
+
+def test_partial_skips_gemini_without_manuscript_signal(tmp_path: Path) -> None:
+    image = tmp_path / "page.jpg"
+    Image.new("RGB", (200, 100), "white").save(image)
+    layout = _layout()
+    assessment = HandwritingAssessment(
+        True,
+        0.5,
+        ("sparse weak OCR lines (15%)",),
+        extent="partial",
+        manuscript_score=0.2,
+    )
+    settings = Settings.model_construct(google_api_key="test-key", handwriting_gemini_enabled=True)
 
     with patch(
         "historical_ocr.lib.handwriting_gemini.build_gemini_model",

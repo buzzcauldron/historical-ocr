@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "sources": {},
+  "line_count": 0,
+  "tesstrain": {
+    "prepared_at": "2026-06-11T18:07:19+00:00",
+    "model_name": "histnews",
+    "ground_truth_dir": "/Users/halxiii/Projects/historical ocr/data/tesseract_train/tesstrain/histnews-ground-truth",
+    "line_pairs": 68,
+    "pages_used": 9,
+    "corpus_root": "/Users/halxiii/Projects/historical ocr/data/tesseract_train",
+    "start_model": "eng",
+    "max_iterations": 10000
+  }
+}
