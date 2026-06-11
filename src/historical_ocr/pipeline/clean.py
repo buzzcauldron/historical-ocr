@@ -30,8 +30,6 @@ def clean_print_pages(
         return
 
     job.ensure()
-    clean_dir = job.root / "clean"
-    clean_dir.mkdir(parents=True, exist_ok=True)
 
     def _log(msg: str) -> None:
         if log_fn:
@@ -81,7 +79,7 @@ def clean_print_pages(
         cleaned = post_clean_sanitize(cleaned, settings)
         cleaned = apply_user_tune_rules(cleaned, settings)
 
-        out = clean_dir / f"{page.page_id}.txt"
+        out = job.page_artifacts(page.page_id) / "clean.txt"
         out.write_text(cleaned + "\n", encoding="utf-8")
         page.clean_text_path = str(out.relative_to(job.root))
 

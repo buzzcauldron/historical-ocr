@@ -388,23 +388,23 @@ class JobPaths:
         self.source = self.root / "source"
         self.pages = self.root / "pages"
         self.artifacts = self.root / "artifacts"
-        self.fingerprint = self.root / "fingerprint"
-        self.ocr = self.root / "ocr"
-        self.clean = self.root / "clean"
         self.export = self.root / "export"
 
     @property
     def manifest(self) -> Path:
         return self.root / "manifest.json"
 
+    def page_artifacts(self, page_id: str) -> Path:
+        """Return (and create) the per-page artifact directory."""
+        d = self.artifacts / page_id
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
     def ensure(self) -> None:
         for d in (
             self.source,
             self.pages,
             self.artifacts,
-            self.fingerprint,
-            self.ocr,
-            self.clean,
             self.export,
             self.export / "tei",
         ):

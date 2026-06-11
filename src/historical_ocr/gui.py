@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import queue
+import shutil
 import subprocess
 import sys
 import threading
@@ -25,6 +26,22 @@ from historical_ocr.lib.training_loop import correction_template_path, teach_fro
 from historical_ocr.gui_state import load_gui_state, save_gui_state
 from historical_ocr.pipeline.run_job import run_job
 
+
+def _companion_status() -> list[tuple[str, bool, str]]:
+    """Return (label, installed, install_hint) for each companion tool."""
+    return [
+        (
+            "transcriber-shell",
+            shutil.which("transcriber-shell") is not None,
+            "pip install transcriber-shell",
+        ),
+        (
+            "strigil",
+            shutil.which("strigil") is not None,
+            "pip install strigil",
+        ),
+    ]
+
 _BG = "#f6f4ef"
 _FG = "#1f1f1f"
 _MUTED = "#4a4a4a"
@@ -32,7 +49,7 @@ _ACCENT = "#2f3f4f"
 _FIELD_BG = "#fffcf7"
 
 _INPUT_SUFFIXES = {".pdf", ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".bmp"}
-_STATE_VERSION = 3
+_STATE_VERSION = 4
 
 
 class HistoricalOcrGui:
@@ -48,7 +65,8 @@ class HistoricalOcrGui:
             self.root = tk.Tk()
 
         self.root.title("Historical OCR")
-        self.root.minsize(520, 620)
+        self.root.minsize(520, 560)
+        self.root.geometry("600x680")
         self.root.configure(bg=_BG)
 
         self._settings = Settings()
@@ -56,6 +74,7 @@ class HistoricalOcrGui:
         self._worker: threading.Thread | None = None
 
         self._sources: list[Path] = []
+        self._url_sources: list[str] = []
         self._job_id = tk.StringVar(value="job1")
         self._api_key = tk.StringVar(value="")
         self._provider_label = tk.StringVar(value=provider_label("none"))
@@ -76,27 +95,54 @@ class HistoricalOcrGui:
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _build_ui(self) -> None:
-        outer = ttk.Frame(self.root, padding=12)
+        outer = ttk.Frame(self.root, padding=10)
         outer.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Label(outer, text="Historical OCR", font=("Georgia", 18)).pack(anchor=tk.W)
-        ttk.Label(
-            outer,
-            text="Accuracy first · speed second · teach the model with your fixes",
-            foreground=_MUTED,
-        ).pack(anchor=tk.W, pady=(0, 10))
+        # ── Top bar: title + always-visible Run button ────────────────────
+        top = ttk.Frame(outer)
+        top.pack(fill=tk.X, pady=(0, 8))
+        ttk.Label(top, text="Historical OCR", font=("Georgia", 16)).pack(side=tk.LEFT)
+        self._run_btn = ttk.Button(top, text="▶  Run", command=self._start_run, width=12)
+        self._run_btn.pack(side=tk.RIGHT)
+        ttk.Button(top, text="Open output", command=self._open_job).pack(side=tk.RIGHT, padx=(0, 6))
+        ttk.Separator(outer, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(0, 8))
 
-        key_frame = ttk.LabelFrame(outer, text="API key (optional — auto-detects provider)", padding=8)
-        key_frame.pack(fill=tk.X)
-        row_k = ttk.Frame(key_frame)
-        row_k.pack(fill=tk.X)
-        self._api_entry = ttk.Entry(row_k, textvariable=self._api_key, show="•", width=48)
-        self._api_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self._api_key.trace_add("write", lambda *_: self._on_api_key_change())
-        ttk.Label(key_frame, textvariable=self._provider_label, foreground=_MUTED).pack(anchor=tk.W, pady=(4, 0))
+        # ── Sources ───────────────────────────────────────────────────────
+        files_frame = ttk.LabelFrame(outer, text="Sources — files, folders, or URLs", padding=6)
+        files_frame.pack(fill=tk.BOTH, expand=True)
 
-        qual_frame = ttk.LabelFrame(outer, text="Quality", padding=8)
-        qual_frame.pack(fill=tk.X, pady=8)
+        list_row = ttk.Frame(files_frame)
+        list_row.pack(fill=tk.BOTH, expand=True)
+        self._files_list = tk.Listbox(list_row, height=5, bg=_FIELD_BG, fg=_FG, selectbackground=_ACCENT)
+        self._files_list.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
+        scroll = ttk.Scrollbar(list_row, command=self._files_list.yview)
+        scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self._files_list.configure(yscrollcommand=scroll.set)
+        if self._dnd_available and DND_FILES is not None:
+            self._files_list.drop_target_register(DND_FILES)
+            self._files_list.dnd_bind("<<Drop>>", self._on_drop)
+
+        brow = ttk.Frame(files_frame)
+        brow.pack(fill=tk.X, pady=(4, 0))
+        ttk.Button(brow, text="Add files…", command=self._add_files).pack(side=tk.LEFT)
+        ttk.Button(brow, text="Add folder…", command=self._add_folder).pack(side=tk.LEFT, padx=4)
+        ttk.Button(brow, text="Clear", command=self._clear_files).pack(side=tk.LEFT, padx=4)
+
+        url_row = ttk.Frame(files_frame)
+        url_row.pack(fill=tk.X, pady=(4, 0))
+        self._url_var = tk.StringVar()
+        ttk.Label(url_row, text="URL").pack(side=tk.LEFT)
+        url_entry = ttk.Entry(url_row, textvariable=self._url_var)
+        url_entry.pack(side=tk.LEFT, padx=(6, 4), fill=tk.X, expand=True)
+        url_entry.bind("<Return>", lambda _e: self._add_url())
+        ttk.Button(url_row, text="Add", command=self._add_url).pack(side=tk.LEFT)
+
+        # ── Settings row: quality + meta ─────────────────────────────────
+        settings_row = ttk.Frame(outer)
+        settings_row.pack(fill=tk.X, pady=6)
+
+        qual_frame = ttk.LabelFrame(settings_row, text="Quality", padding=4)
+        qual_frame.pack(side=tk.LEFT, fill=tk.Y)
         for tier in ("free", "medium", "high"):
             ttk.Radiobutton(
                 qual_frame,
@@ -105,67 +151,56 @@ class HistoricalOcrGui:
                 value=tier,
             ).pack(anchor=tk.W)
 
-        review_frame = ttk.LabelFrame(outer, text="Review PNG (problem pages only)", padding=8)
-        review_frame.pack(fill=tk.X, pady=(0, 8))
-        ttk.Checkbutton(
-            review_frame,
-            text="Write .review.png when glyph drops or low-confidence lines exist",
-            variable=self._review_png,
-        ).pack(anchor=tk.W)
-        rrow = ttk.Frame(review_frame)
-        rrow.pack(fill=tk.X, pady=(4, 0))
-        ttk.Label(rrow, text="Low-confidence threshold (0–100)").pack(side=tk.LEFT)
-        ttk.Entry(rrow, textvariable=self._review_conf_threshold, width=5).pack(side=tk.LEFT, padx=(6, 0))
+        meta_frame = ttk.Frame(settings_row)
+        meta_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(10, 0))
 
-        files_frame = ttk.LabelFrame(outer, text="Newspaper / print files", padding=8)
-        files_frame.pack(fill=tk.BOTH, expand=True)
-        self._files_list = tk.Listbox(files_frame, height=6, bg=_FIELD_BG, fg=_FG, selectbackground=_ACCENT)
-        self._files_list.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
-        scroll = ttk.Scrollbar(files_frame, command=self._files_list.yview)
-        scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        self._files_list.configure(yscrollcommand=scroll.set)
-        if self._dnd_available and DND_FILES is not None:
-            self._files_list.drop_target_register(DND_FILES)
-            self._files_list.dnd_bind("<<Drop>>", self._on_drop)
-        brow = ttk.Frame(files_frame)
-        brow.pack(fill=tk.X, pady=(6, 0))
-        ttk.Button(brow, text="Add files…", command=self._add_files).pack(side=tk.LEFT)
-        ttk.Button(brow, text="Clear", command=self._clear_files).pack(side=tk.LEFT, padx=6)
+        key_frame = ttk.LabelFrame(meta_frame, text="API key", padding=4)
+        key_frame.pack(fill=tk.X)
+        self._api_entry = ttk.Entry(key_frame, textvariable=self._api_key, show="•")
+        self._api_entry.pack(fill=tk.X)
+        self._api_key.trace_add("write", lambda *_: self._on_api_key_change())
+        ttk.Label(key_frame, textvariable=self._provider_label, foreground=_MUTED).pack(anchor=tk.W, pady=(2, 0))
 
-        meta = ttk.Frame(outer)
-        meta.pack(fill=tk.X, pady=4)
-        ttk.Label(meta, text="Publication year").pack(side=tk.LEFT)
-        ttk.Entry(meta, textvariable=self._publication_year, width=6).pack(side=tk.LEFT, padx=(6, 16))
-        ttk.Label(meta, text="Job name").pack(side=tk.LEFT)
-        ttk.Entry(meta, textvariable=self._job_id, width=16).pack(side=tk.LEFT, padx=6)
+        job_row = ttk.Frame(meta_frame)
+        job_row.pack(fill=tk.X, pady=(6, 0))
+        ttk.Label(job_row, text="Year").pack(side=tk.LEFT)
+        ttk.Entry(job_row, textvariable=self._publication_year, width=6).pack(side=tk.LEFT, padx=(4, 12))
+        ttk.Label(job_row, text="Job").pack(side=tk.LEFT)
+        ttk.Entry(job_row, textvariable=self._job_id, width=16).pack(side=tk.LEFT, padx=4)
 
-        train = ttk.LabelFrame(outer, text="Training loop", padding=8)
-        train.pack(fill=tk.X, pady=8)
-        ttk.Label(
-            train,
-            text="1 Run OCR  →  2 Fix export/*.corrected.txt  →  3 Teach (updates tune rules)",
-            foreground=_MUTED,
-            wraplength=480,
-        ).pack(anchor=tk.W)
-        trow = ttk.Frame(train)
-        trow.pack(fill=tk.X, pady=6)
-        ttk.Button(trow, text="Open corrected text", command=self._open_corrected).pack(side=tk.LEFT)
-        ttk.Button(trow, text="Teach from last job", command=self._teach).pack(side=tk.LEFT, padx=8)
-        ttk.Label(trow, textvariable=self._rules_count, foreground=_MUTED).pack(side=tk.LEFT, padx=8)
+        review_row = ttk.Frame(meta_frame)
+        review_row.pack(fill=tk.X, pady=(4, 0))
+        ttk.Checkbutton(review_row, text="Review PNG", variable=self._review_png).pack(side=tk.LEFT)
+        ttk.Label(review_row, text="threshold").pack(side=tk.LEFT, padx=(8, 2))
+        ttk.Entry(review_row, textvariable=self._review_conf_threshold, width=4).pack(side=tk.LEFT)
 
-        log_frame = ttk.LabelFrame(outer, text="Log", padding=8)
+        # ── Secondary panels ──────────────────────────────────────────────
+        sec = ttk.Frame(outer)
+        sec.pack(fill=tk.X, pady=(0, 4))
+
+        train_frame = ttk.LabelFrame(sec, text="Training loop", padding=4)
+        train_frame.pack(side=tk.LEFT, fill=tk.Y)
+        trow = ttk.Frame(train_frame)
+        trow.pack(fill=tk.X)
+        ttk.Button(trow, text="Open corrected", command=self._open_corrected).pack(side=tk.LEFT)
+        ttk.Button(trow, text="Teach", command=self._teach).pack(side=tk.LEFT, padx=4)
+        ttk.Label(train_frame, textvariable=self._rules_count, foreground=_MUTED).pack(anchor=tk.W, pady=(2, 0))
+
+        comp_frame = ttk.LabelFrame(sec, text="Companions", padding=4)
+        comp_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(8, 0))
+        for name, installed, hint in _companion_status():
+            color = _MUTED if installed else "#aa3300"
+            text = f"✓ {name}" if installed else f"✗ {name}"
+            ttk.Label(comp_frame, text=text, foreground=color).pack(anchor=tk.W)
+
+        # ── Status + log ─────────────────────────────────────────────────
+        ttk.Label(outer, textvariable=self._status, foreground=_MUTED).pack(anchor=tk.W)
+        log_frame = ttk.LabelFrame(outer, text="Log", padding=4)
         log_frame.pack(fill=tk.BOTH, expand=True)
         self._log = scrolledtext.ScrolledText(
-            log_frame, height=8, bg=_FIELD_BG, fg=_FG, state=tk.DISABLED, wrap=tk.WORD,
+            log_frame, height=6, bg=_FIELD_BG, fg=_FG, state=tk.DISABLED, wrap=tk.WORD,
         )
         self._log.pack(fill=tk.BOTH, expand=True)
-
-        bottom = ttk.Frame(outer)
-        bottom.pack(fill=tk.X, pady=(8, 0))
-        self._run_btn = ttk.Button(bottom, text="Run", command=self._start_run)
-        self._run_btn.pack(side=tk.LEFT)
-        ttk.Button(bottom, text="Open output", command=self._open_job).pack(side=tk.LEFT, padx=8)
-        ttk.Label(bottom, textvariable=self._status, foreground=_MUTED).pack(side=tk.RIGHT)
 
     def _on_api_key_change(self) -> None:
         provider = detect_provider(self._api_key.get())
@@ -211,8 +246,33 @@ class HistoricalOcrGui:
         for p in paths:
             self._add_path(Path(p))
 
+    def _add_folder(self) -> None:
+        folder = filedialog.askdirectory(title="Select folder of images or PDFs")
+        if not folder:
+            return
+        folder_path = Path(folder)
+        added = 0
+        for p in sorted(folder_path.iterdir()):
+            if p.is_file() and p.suffix.lower() in _INPUT_SUFFIXES:
+                self._add_path(p)
+                added += 1
+        if added == 0:
+            messagebox.showinfo("Historical OCR", f"No supported files found in {folder_path.name}.")
+
+    def _add_url(self) -> None:
+        url = self._url_var.get().strip()
+        if not url:
+            return
+        if url in self._url_sources:
+            messagebox.showinfo("Historical OCR", "URL already added.")
+            return
+        self._url_sources.append(url)
+        self._files_list.insert(tk.END, f"[url] {url}")
+        self._url_var.set("")
+
     def _clear_files(self) -> None:
         self._sources.clear()
+        self._url_sources.clear()
         self._files_list.delete(0, tk.END)
 
     def _open_job(self) -> None:
@@ -264,8 +324,8 @@ class HistoricalOcrGui:
         if not job_id:
             messagebox.showerror("Historical OCR", "Job name required.")
             return
-        if not self._sources:
-            messagebox.showerror("Historical OCR", "Add at least one file.")
+        if not self._sources and not self._url_sources:
+            messagebox.showerror("Historical OCR", "Add at least one file or URL.")
             return
 
         self._run_btn.configure(state=tk.DISABLED)
@@ -299,7 +359,8 @@ class HistoricalOcrGui:
             )
             manifest = run_job(
                 self._job_id.get().strip(),
-                inputs=self._sources,
+                inputs=self._sources or None,
+                urls=self._url_sources or None,
                 settings=settings,
                 mode="print",
                 publication_year=year,
@@ -314,10 +375,12 @@ class HistoricalOcrGui:
             if corr:
                 self._log_q.put(f"step 2: edit {corr}")
             self._log_q.put(json.dumps(manifest.export, indent=2))
-            self.root.after(0, lambda: self._status.set(f"Done — {effective} tier"))
+            ok_pages = sum(1 for p in manifest.pages if p.status == "ok")
+            self._log_q.put(f"\n✓ Done — {ok_pages} page(s) · {effective} tier")
+            self.root.after(0, lambda: self._status.set(f"✓ Done — {ok_pages} page(s), {effective} tier"))
         except Exception as exc:
-            self._log_q.put(f"error: {exc}")
-            self.root.after(0, lambda: self._status.set("Failed."))
+            self._log_q.put(f"\n✗ Failed: {exc}")
+            self.root.after(0, lambda: self._status.set("✗ Failed — see log"))
         finally:
             self.root.after(0, lambda: self._run_btn.configure(state=tk.NORMAL))
 
@@ -331,6 +394,7 @@ class HistoricalOcrGui:
             "review_conf_threshold": self._review_conf_threshold.get(),
             "publication_year": self._publication_year.get(),
             "sources": [str(p) for p in self._sources],
+            "url_sources": list(self._url_sources),
             "last_job_id": self._last_job_id,
         }
 
@@ -349,6 +413,10 @@ class HistoricalOcrGui:
             path = Path(str(raw))
             if path.is_file():
                 self._add_path(path)
+        for u in data.get("url_sources", []):
+            if u and u not in self._url_sources:
+                self._url_sources.append(u)
+                self._files_list.insert(tk.END, f"[url] {u}")
 
     def _on_close(self) -> None:
         try:
@@ -358,6 +426,7 @@ class HistoricalOcrGui:
         self.root.destroy()
 
     def run(self) -> None:
+        self.root.update_idletasks()
         self.root.mainloop()
 
 

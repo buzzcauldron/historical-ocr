@@ -36,6 +36,13 @@ dependencies = [
 
 [project.optional-dependencies]
 figures = ["ultralytics>=8.0"]
+transcriber = ["transcriber-shell>=0.1"]
+strigil = ["strigil>=0.1"]
+suite = [
+  "historical-ocr[figures]",
+  "transcriber-shell>=0.1",
+  "strigil>=0.1",
+]
 dev = ["pytest>=8.0"]
 
 [project.scripts]

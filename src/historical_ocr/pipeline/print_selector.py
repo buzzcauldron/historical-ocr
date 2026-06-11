@@ -180,6 +180,24 @@ def run_tesseract_backend(
             )
             if column_result is not None:
                 return _finish(column_result)
+
+        # Fallback column detection — always try before full-page OCR so that
+        # multi-column pages don't get merged into single lines by PSM 6.
+        from historical_ocr.lib.column_ocr import ocr_image_by_columns
+
+        detected_columns = ocr_image_by_columns(
+            path,
+            lang=lang,
+            psm=column_psm,
+            settings=settings,
+            filter_opts=filter_opts,
+            min_gutter_px=column_gutter,
+            ink_layout=ink_layout,
+            log_fn=log_fn,
+        )
+        if detected_columns is not None:
+            return _finish(detected_columns)
+
         return _finish(
             ocr_fn(
                 path,

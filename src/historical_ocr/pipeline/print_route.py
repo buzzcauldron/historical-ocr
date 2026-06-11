@@ -133,7 +133,7 @@ def _save_layout_outputs(
         layout,
         pagexml_path=page_pagexml(job.root, page.page_id),
         tei_path=page_tei(job.root, page.page_id),
-        clean_txt_path=job.ocr / f"{page.page_id}.layout.txt",
+        clean_txt_path=job.page_artifacts(page.page_id) / "layout_ocr.txt",
     )
     page.pagexml_path = str(page_pagexml(job.root, page.page_id).relative_to(job.root))
     page.tei_path = str(page_tei(job.root, page.page_id).relative_to(job.root))
@@ -175,7 +175,7 @@ def ocr_single_page(
     )
     _log(f"print-ocr: {page.page_id} [{plan.kind.value}] doc_type={spec.name if spec else '—'}")
 
-    out_txt = job.ocr / f"{page.page_id}.txt"
+    out_txt = job.page_artifacts(page.page_id) / "ocr.txt"
 
     try:
         if plan.kind == PrintPlanKind.PDF_TEXT_FIRST and source_pdf and source_pdf.is_file():

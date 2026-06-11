@@ -35,6 +35,7 @@ def run_job(
     job_id: str,
     *,
     url: str | None = None,
+    urls: list[str] | None = None,
     limit: int | None = None,
     inputs: list[Path] | None = None,
     settings: Settings | None = None,
@@ -126,8 +127,16 @@ def run_job(
     if mode not in ("print",):
         _log(f"note: --mode {mode} ignored (print-only)")
 
+    all_urls = list(urls or [])
     if url:
-        sources = acquire_from_url(url, job, manifest, limit=limit, log_fn=_log)
+        all_urls.insert(0, url)
+
+    if all_urls:
+        sources = []
+        for u in all_urls:
+            sources.extend(acquire_from_url(u, job, manifest, limit=limit, log_fn=_log))
+        if inputs:
+            sources.extend(ingest_local(inputs, job, manifest))
     elif inputs:
         sources = ingest_local(inputs, job, manifest)
     else:

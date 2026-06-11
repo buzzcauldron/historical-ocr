@@ -202,24 +202,35 @@ def ocr_image_overlaid(
     log_fn: Callable[[str], None] | None = None,
 ) -> LayoutOcrResult | None:
     """OCR ink-zone overlays (columns or section bands) with merged reading order."""
+
+    def _log(msg: str) -> None:
+        if log_fn:
+            log_fn(msg)
+
+    using_section_bands = _use_section_bands_for_columns(ink_layout) or (
+        len(ink_layout.columns) < 2 and use_sections
+    )
     regions = regions_from_ink_layout(
         ink_layout,
         use_sections=use_sections,
         pad=region_pad_px,
     )
     regions = expand_wide_regions(image, regions, ink_layout)
-    kept, skipped = filter_text_regions(image, regions, settings=settings)
-    if skipped:
-        _log(
-            f"text-slice: kept {len(kept)}/{len(regions)} regions (skipped {summarize_skipped(skipped)})",
-        )
-    regions = kept
+
+    # Only apply text-slice filtering on section bands, not full-height column
+    # crops — filtering a full column would drop it entirely and fall back to
+    # full-page OCR which merges lines across columns.
+    if using_section_bands:
+        kept, skipped = filter_text_regions(image, regions, settings=settings)
+        if skipped:
+            _log(
+                f"text-slice: kept {len(kept)}/{len(regions)} regions"
+                f" (skipped {summarize_skipped(skipped)})",
+            )
+        regions = kept
+
     if len(regions) < 2:
         return None
-
-    def _log(msg: str) -> None:
-        if log_fn:
-            log_fn(msg)
 
     if len(ink_layout.columns) >= 2 and not _use_section_bands_for_columns(ink_layout):
         kind = "column"

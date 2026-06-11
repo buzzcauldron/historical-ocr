@@ -17,9 +17,9 @@ _TIER_ORDER: tuple[QualityTier, ...] = ("free", "medium", "high")
 
 def tier_label(tier: QualityTier) -> str:
     return {
-        "free": "Free — rules + tune (~5 s/page)",
-        "medium": "Medium — glyph filter + rules (~6 s/page)",
-        "high": "High — medium + spot LLM on damage (~10–20 s/page)",
+        "free": "Free — rules + tune, no LLM (~5 s/page)",
+        "medium": "Medium — glyph filter + rules + spot LLM on damage if key (~6–12 s/page)",
+        "high": "High — medium + full damage LLM + handwriting (~10–20 s/page)",
     }[tier]
 
 
@@ -71,7 +71,7 @@ def apply_quality_tier(
         }
         if api_key and provider in ("gemini", "anthropic", "openai"):
             s = _inject_api_key(s, provider, api_key)
-            medium_updates["clean_llm_model"] = _default_model(provider)
+            medium_updates["clean_llm_model"] = _default_model(provider, tier="medium")
         return s.model_copy(update=medium_updates), provider if api_key else "none", effective
 
     # high — spot LLM on damaged lines; fall back to medium without API
@@ -87,7 +87,7 @@ def apply_quality_tier(
 
     s = apply_rules_only_presets(settings)
     s = _inject_api_key(s, provider, api_key)
-    model = _default_model(provider)
+    model = _default_model(provider, tier="high")
     spot_llm = _spot_llm_flags(provider, api_key, tier="high")
     return s.model_copy(
         update={
@@ -149,11 +149,18 @@ def apply_tier_for_run(
     return updated
 
 
-def _default_model(provider: ProviderName) -> str | None:
+def _default_model(provider: ProviderName, *, tier: QualityTier = "high") -> str | None:
+    if tier == "medium":
+        # Spot repair on ≤8 lines — use fastest/cheapest model.
+        return {
+            "anthropic": "claude-haiku-4-5-20251001",
+            "gemini": "gemini-2.5-flash",
+            "openai": "gpt-4o-mini",
+        }.get(provider)
     return {
-        "anthropic": "claude-sonnet-4-20250514",
-        "gemini": "gemini-2.5-flash",
-        "openai": "gpt-4o-mini",
+        "anthropic": "claude-sonnet-4-6",
+        "gemini": "gemini-2.5-pro",
+        "openai": "gpt-4o",
     }.get(provider)
 
 
