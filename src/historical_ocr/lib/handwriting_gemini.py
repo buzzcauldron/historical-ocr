@@ -56,6 +56,19 @@ def _crop_line_jpeg(page_rgb, line: OcrLine, *, pad: int = 8) -> bytes | None:
     return buf.getvalue()
 
 
+def _worth_gemini_transcription(assessment: HandwritingAssessment) -> bool:
+    """Skip Gemini on print pages where partial was inferred from weak OCR alone."""
+    ms = assessment.manuscript_score
+    if ms is not None and ms >= 0.35:
+        return True
+    if assessment.likely_handwriting:
+        for reason in assessment.reasons:
+            lower = reason.lower()
+            if "cnn" in lower or "manuscript" in lower:
+                return True
+    return False
+
+
 def transcribe_partial_handwriting(
     layout: LayoutOcrResult,
     image: Path,
@@ -65,6 +78,8 @@ def transcribe_partial_handwriting(
     log_fn: Callable[[str], None] | None = None,
 ) -> LayoutOcrResult:
     if assessment.extent != "partial":
+        return layout
+    if not _worth_gemini_transcription(assessment):
         return layout
     if not getattr(settings, "handwriting_gemini_enabled", True):
         return layout

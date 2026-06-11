@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "source_id": "institutional-books",
+  "repo": "institutional/institutional-books-1.0-metadata",
+  "kind": "metadata_only",
+  "tesstrain_ready": false,
+  "fetched_at": "2026-06-11T17:51:42+00:00",
+  "filters": {
+    "language_gen": "eng",
+    "min_ocr_score_src": 70,
+    "min_ocr_score_gen": 70,
+    "min_year": 1800,
+    "max_year": 1920,
+    "exclude_likely_duplicates": true,
+    "limit": 10
+  },
+  "scanned": 16,
+  "kept": 10,
+  "records_path": "records.jsonl",
+  "notes": "Institutional Books 1.0 \u2014 metadata filter catalog. Pair page scans via: tess fetch --source institutional-books --archive-org"
+}

@@ -9,7 +9,7 @@ from historical_ocr.config import JobPaths, Settings
 from historical_ocr.models.manifest import JobManifest
 from historical_ocr.pipeline.acquire import acquire_from_url, ingest_local
 from historical_ocr.lib.fast_presets import apply_fast_presets, apply_low_latency_presets
-from historical_ocr.lib.quality_presets import DEFAULT_QUALITY_TIER, resolve_run_flags
+from historical_ocr.lib.quality_presets import DEFAULT_QUALITY_TIER, apply_tier_for_run, resolve_run_flags
 from historical_ocr.lib.rules_only import apply_rules_only_presets
 from historical_ocr.pipeline.export import export_job
 from historical_ocr.pipeline.prepare import prepare_pages
@@ -54,6 +54,10 @@ def run_job(
     symbol_filter: bool | None = None,
     glyph_heatmap: bool | None = None,
     review_conf_threshold: float | None = None,
+    overlaid_ocr: bool | None = None,
+    text_slice_only: bool | None = None,
+    text_slice_include_ads: bool | None = None,
+    text_slice_include_figures: bool | None = None,
     log_fn: Callable[[str], None] | None = None,
     **_: object,
 ) -> JobManifest:
@@ -67,12 +71,11 @@ def run_job(
     )
     if tier_flags.get("low_latency"):
         s = apply_low_latency_presets(s)
-    elif tier_flags.get("rules_only"):
-        s = apply_rules_only_presets(s)
     elif tier_flags.get("fast"):
         s = apply_fast_presets(s)
     else:
-        s = apply_rules_only_presets(s)
+        api_key = s.google_api_key or s.anthropic_api_key or s.openai_api_key
+        s = apply_tier_for_run(s, tier_name, api_key=api_key)
     updates: dict = {}
     if clean is not None:
         updates["clean_print"] = clean
@@ -96,6 +99,14 @@ def run_job(
         updates["figure_extract_enabled"] = extract_figures
     if deskew is not None:
         updates["deskew_enabled"] = deskew
+    if overlaid_ocr is not None:
+        updates["overlaid_ocr_enabled"] = overlaid_ocr
+    if text_slice_only is not None:
+        updates["text_slice_only"] = text_slice_only
+    if text_slice_include_ads is not None:
+        updates["text_slice_include_ads"] = text_slice_include_ads
+    if text_slice_include_figures is not None:
+        updates["text_slice_include_figures"] = text_slice_include_figures
     if updates:
         s = s.model_copy(update=updates)
     job = JobPaths((s.jobs_dir / job_id).expanduser().resolve())

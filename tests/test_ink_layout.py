@@ -11,7 +11,10 @@ from historical_ocr.lib.ink_layout import (
     InkLayout,
     InkSection,
     analyze_ink_layout,
+    column_count_from_ink_zones,
+    detect_column_bounds,
     detect_horizontal_bands,
+    has_multiple_columns,
     render_ink_layout_heatmap,
 )
 
@@ -31,6 +34,17 @@ def test_analyze_ink_layout_three_columns() -> None:
     layout = analyze_ink_layout(gray, page_width=900, page_height=800, min_gutter_px=10)
     assert len(layout.columns) == 3
     assert len(layout.sections) >= 3
+
+
+def test_detect_columns_ignores_full_width_header() -> None:
+    gray = np.full((800, 900), 255, dtype=np.uint8)
+    gray[20:80, :] = 30
+    for x0, x1 in ((40, 240), (340, 540), (640, 840)):
+        gray[100:700, x0:x1] = 30
+    bounds = detect_column_bounds(gray, min_gutter_px=10)
+    assert len(bounds) == 3
+    assert has_multiple_columns(gray, min_gutter_px=10)
+    assert column_count_from_ink_zones(gray, min_gutter_px=10) == 3
 
 
 def test_render_ink_layout_heatmap(tmp_path) -> None:

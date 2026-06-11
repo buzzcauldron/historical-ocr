@@ -192,7 +192,8 @@ def ocr_single_page(
                 return
 
         t0 = time.perf_counter()
-        ink_counts = prepare_ink_layout(
+        t_ink = time.perf_counter()
+        ink_counts, ink_layout = prepare_ink_layout(
             job.root,
             page.page_id,
             image,
@@ -200,10 +201,12 @@ def ocr_single_page(
             spec,
             log_fn=_log,
         )
+        ink_s = time.perf_counter() - t_ink
 
         lang = spec.tesseract_lang if spec else settings.tesseract_lang
         psm = spec.tesseract_psm if spec else 6
         preprocess = spec.preprocess if spec else {}
+        t_ocr = time.perf_counter()
         layout = run_tesseract_backend(
             image,
             lang=lang,
@@ -211,8 +214,11 @@ def ocr_single_page(
             preprocess=preprocess,
             settings=settings,
             print_spec=spec,
+            ink_layout=ink_layout,
             log_fn=_log,
         )
+        ocr_s = time.perf_counter() - t_ocr
+        t_post = time.perf_counter()
         layout, counts = postprocess_layout(
             layout,
             image,
@@ -222,7 +228,11 @@ def ocr_single_page(
             manifest,
             log_fn=_log,
         )
+        post_s = time.perf_counter() - t_post
         counts.absorb(ink_counts)
+        counts.ink_s = ink_s
+        counts.ocr_s = ocr_s
+        counts.post_s = post_s
         counts.elapsed_s = time.perf_counter() - t0
         _log(counts.summary_line(page.page_id))
         out_txt.write_text(layout.full_text + "\n", encoding="utf-8")

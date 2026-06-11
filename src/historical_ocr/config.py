@@ -2,11 +2,53 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_SHARED_ENV_KEYS = (
+    "GOOGLE_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "HF_TOKEN",
+    "HUGGINGFACE_HUB_TOKEN",
+)
+
+
+def bootstrap_shared_env() -> None:
+    """Use sibling transcription-shell/.env when local keys are unset or empty."""
+    try:
+        from dotenv import dotenv_values
+    except ImportError:
+        return
+
+    shell_env = _REPO_ROOT.parent / "transcription-shell" / ".env"
+    if not shell_env.is_file():
+        return
+
+    local_env = _REPO_ROOT / ".env"
+    local_vals = dotenv_values(local_env) if local_env.is_file() else {}
+    shell_vals = dotenv_values(shell_env)
+
+    for key in _SHARED_ENV_KEYS:
+        current = os.environ.get(key) or local_vals.get(key) or ""
+        if str(current).strip():
+            continue
+        value = shell_vals.get(key)
+        if value and str(value).strip():
+            os.environ[key] = str(value).strip()
+
+    hf = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_HUB_TOKEN")
+    if hf:
+        os.environ.setdefault("HF_TOKEN", hf)
+        os.environ.setdefault("HUGGINGFACE_HUB_TOKEN", hf)
+
+
+bootstrap_shared_env()
 
 MaterialMode = Literal["print"]
 NormalizationMode = Literal["diplomatic", "normalized", "modern"]
@@ -76,6 +118,22 @@ class Settings(BaseSettings):
     save_layout_artifacts: bool = Field(
         default=True,
         validation_alias="HISTORICAL_OCR_SAVE_LAYOUT_ARTIFACTS",
+    )
+    overlaid_ocr_enabled: bool = Field(
+        default=False,
+        validation_alias="HISTORICAL_OCR_OVERLAID_OCR",
+    )
+    text_slice_only: bool = Field(
+        default=False,
+        validation_alias="HISTORICAL_OCR_TEXT_SLICE_ONLY",
+    )
+    text_slice_include_ads: bool = Field(
+        default=False,
+        validation_alias="HISTORICAL_OCR_TEXT_SLICE_INCLUDE_ADS",
+    )
+    text_slice_include_figures: bool = Field(
+        default=False,
+        validation_alias="HISTORICAL_OCR_TEXT_SLICE_INCLUDE_FIGURES",
     )
     export_internal: bool = Field(
         default=True,

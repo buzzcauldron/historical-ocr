@@ -1,0 +1,239 @@
+{
+  "companion_txt": "export/BlackNews_19700110_002.txt",
+  "page_id": "BlackNews_19700110_002",
+  "reviewed": 43,
+  "dropped": 25,
+  "kept": 18,
+  "drops": [
+    {
+      "left": 663,
+      "top": 945,
+      "width": 2,
+      "height": 2,
+      "kind": "symbol",
+      "keep": false,
+      "reason": "symbol_low_conf"
+    },
+    {
+      "left": 662,
+      "top": 1114,
+      "width": 286,
+      "height": 45,
+      "kind": "unknown",
+      "keep": false,
+      "reason": "ambiguous"
+    },
+    {
+      "left": 1038,
+      "top": 1304,
+      "width": 4,
+      "height": 5,
+      "kind": "damage",
+      "keep": false,
+      "reason": "ink_blob"
+    },
+    {
+      "left": 1400,
+      "top": 1727,
+      "width": 3,
+      "height": 6,
+      "kind": "symbol",
+      "keep": false,
+      "reason": "symbol_low_conf"
+    },
+    {
+      "left": 1400,
+      "top": 1988,
+      "width": 3,
+      "height": 3,
+      "kind": "symbol",
+      "keep": false,
+      "reason": "symbol_low_conf"
+    },
+    {
+      "left": 1431,
+      "top": 1980,
+      "width": 2,
+      "height": 3,
+      "kind": "symbol",
+      "keep": false,
+      "reason": "symbol_low_conf"
+    },
+    {
+      "left": 1070,
+      "top": 2238,
+      "width": 97,
+      "height": 32,
+      "kind": "unknown",
+      "keep": false,
+      "reason": "ambiguous"
+    },
+    {
+      "left": 1412,
+      "top": 2388,
+      "width": 3,
+      "height": 4,
+      "kind": "damage",
+      "keep": false,
+      "reason": "ink_blob"
+    },
+    {
+      "left": 1341,
+      "top": 2688,
+      "width": 33,
+      "height": 33,
+      "kind": "symbol",
+      "keep": false,
+      "reason": "lone_symbol"
+    },
+    {
+      "left": 209,
+      "top": 2834,
+      "width": 14,
+      "height": 39,
+      "kind": "damage",
+      "keep": false,
+      "reason": "lone_digit"
+    },
+    {
+      "left": 858,
+      "top": 3046,
+      "width": 159,
+      "height": 40,
+      "kind": "unknown",
+      "keep": false,
+      "reason": "ambiguous"
+    },
+    {
+      "left": 154,
+      "top": 3184,
+      "width": 3,
+      "height": 41,
+      "kind": "rule",
+      "keep": false,
+      "reason": "vertical_rule"
+    },
+    {
+      "left": 1461,
+      "top": 433,
+      "width": 3,
+      "height": 2,
+      "kind": "symbol",
+      "keep": false,
+      "reason": "symbol_low_conf"
+    },
+    {
+      "left": 1482,
+      "top": 376,
+      "width": 204,
+      "height": 33,
+      "kind": "unknown",
+      "keep": false,
+      "reason": "ambiguous"
+    },
+    {
+      "left": 2485,
+      "top": 958,
+      "width": 162,
+      "height": 50,
+      "kind": "unknown",
+      "keep": false,
+      "reason": "ambiguous"
+    },
+    {
+      "left": 1480,
+      "top": 1003,
+      "width": 734,
+      "height": 52,
+      "kind": "unknown",
+      "keep": false,
+      "reason": "ambiguous"
+    },
+    {
+      "left": 1465,
+      "top": 1819,
+      "width": 4,
+      "height": 5,
+      "kind": "damage",
+      "keep": false,
+      "reason": "ink_blob"
+    },
+    {
+      "left": 1480,
+      "top": 1787,
+      "width": 205,
+      "height": 40,
+      "kind": "unknown",
+      "keep": false,
+      "reason": "ambiguous"
+    },
+    {
+      "left": 2320,
+      "top": 1892,
+      "width": 164,
+      "height": 35,
+      "kind": "unknown",
+      "keep": false,
+      "reason": "ambiguous"
+    },
+    {
+      "left": 1585,
+      "top": 2800,
+      "width": 191,
+      "height": 36,
+      "kind": "unknown",
+      "keep": false,
+      "reason": "ambiguous"
+    },
+    {
+      "left": 2658,
+      "top": 2864,
+      "width": 5,
+      "height": 18,
+      "kind": "symbol",
+      "keep": false,
+      "reason": "symbol_low_conf"
+    },
+    {
+      "left": 2687,
+      "top": 3128,
+      "width": 2,
+      "height": 2,
+      "kind": "symbol",
+      "keep": false,
+      "reason": "symbol_low_conf"
+    },
+    {
+      "left": 2663,
+      "top": 3184,
+      "width": 12,
+      "height": 44,
+      "kind": "damage",
+      "keep": false,
+      "reason": "lone_digit"
+    },
+    {
+      "left": 2669,
+      "top": 3253,
+      "width": 3,
+      "height": 2,
+      "kind": "symbol",
+      "keep": false,
+      "reason": "symbol_low_conf"
+    },
+    {
+      "left": 2847,
+      "top": 2643,
+      "width": 11,
+      "height": 110,
+      "kind": "unknown",
+      "keep": false,
+      "reason": "ambiguous"
+    }
+  ],
+  "layout": {
+    "lines": 117,
+    "mean_confidence": 93.66,
+    "low_conf_lines": 1
+  }
+}

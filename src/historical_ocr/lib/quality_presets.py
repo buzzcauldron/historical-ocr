@@ -57,13 +57,18 @@ def apply_quality_tier(
         "figure_extract_enabled": True,
         "damage_retry_enabled": True,
         "deskew_enabled": True,
+        "overlaid_ocr_enabled": True,
     }
-
-    spot_llm = _spot_llm_flags(provider, api_key)
 
     if tier == "medium":
         s = apply_rules_only_presets(settings)
-        medium_updates: dict = {"clean_llm": None, **accuracy_flags, **spot_llm}
+        spot_llm = _spot_llm_flags(provider, api_key, tier="medium")
+        medium_updates: dict = {
+            "clean_llm": None,
+            "text_slice_only": True,
+            **accuracy_flags,
+            **spot_llm,
+        }
         if api_key and provider in ("gemini", "anthropic", "openai"):
             s = _inject_api_key(s, provider, api_key)
             medium_updates["clean_llm_model"] = _default_model(provider)
@@ -73,11 +78,17 @@ def apply_quality_tier(
     if provider == "none":
         effective = "medium"
         s = apply_rules_only_presets(settings)
-        return s.model_copy(update={"clean_llm": None, **accuracy_flags, "damage_llm_enabled": False}), "none", effective
+        return s.model_copy(update={
+            "clean_llm": None,
+            "text_slice_only": True,
+            **accuracy_flags,
+            "damage_llm_enabled": False,
+        }), "none", effective
 
     s = apply_rules_only_presets(settings)
     s = _inject_api_key(s, provider, api_key)
     model = _default_model(provider)
+    spot_llm = _spot_llm_flags(provider, api_key, tier="high")
     return s.model_copy(
         update={
             "clean_llm": None,
@@ -146,7 +157,7 @@ def _default_model(provider: ProviderName) -> str | None:
     }.get(provider)
 
 
-def _spot_llm_flags(provider: ProviderName, api_key: str | None) -> dict:
+def _spot_llm_flags(provider: ProviderName, api_key: str | None, *, tier: QualityTier) -> dict:
     """Limited per-line LLM for damaged OCR — not full-page clean."""
     if not api_key or provider == "none":
         return {
@@ -154,8 +165,16 @@ def _spot_llm_flags(provider: ProviderName, api_key: str | None) -> dict:
             "escalate_low_confidence": False,
             "handwriting_gemini_enabled": False,
         }
+    if tier == "medium":
+        return {
+            "damage_llm_enabled": True,
+            "escalate_low_confidence": False,
+            "handwriting_gemini_enabled": False,
+            "damage_llm_max_lines": 8,
+        }
     return {
         "damage_llm_enabled": True,
         "escalate_low_confidence": False,
         "handwriting_gemini_enabled": provider == "gemini",
+        "handwriting_gemini_max_regions": 3,
     }

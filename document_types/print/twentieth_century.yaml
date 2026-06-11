@@ -11,6 +11,12 @@ ocr:
   lang: eng
   psm: 3
   char_blacklist: "|_"
+  preprocess:
+    grayscale: true
+    autocontrast: true
+    denoise: true
+    unsharp: true
+    contrast: 1.5
 
 layout:
   backend: tesseract

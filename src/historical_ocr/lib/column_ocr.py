@@ -5,7 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
-from historical_ocr.lib.ink_layout import detect_column_bounds
+from historical_ocr.lib.ink_layout import (
+    InkLayout,
+    column_bounds_from_layout,
+    detect_column_bounds,
+)
 from historical_ocr.lib.layout_ocr import LayoutOcrResult
 from historical_ocr.lib.region_ocr import RegionBox, ocr_image_regions
 
@@ -21,13 +25,20 @@ def ocr_image_by_columns(
     filter_opts=None,
     min_gutter_px: int = 14,
     column_pad_px: int = 6,
+    column_bounds: list[tuple[int, int]] | None = None,
+    ink_layout: InkLayout | None = None,
     log_fn: Callable[[str], None] | None = None,
 ) -> LayoutOcrResult | None:
     from PIL import Image
 
     with Image.open(image) as im:
         page_h = im.size[1]
-        bounds = detect_column_bounds(im.convert("L"), min_gutter_px=min_gutter_px)
+        if column_bounds is not None:
+            bounds = column_bounds
+        elif ink_layout is not None:
+            bounds = column_bounds_from_layout(ink_layout)
+        else:
+            bounds = detect_column_bounds(im.convert("L"), min_gutter_px=min_gutter_px)
 
     if len(bounds) < 2:
         return None

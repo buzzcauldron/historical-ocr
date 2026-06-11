@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "source": "user_corrections",
+  "records": {
+    "BlackNews_19700110_002": {
+      "split": "train",
+      "stem": "BlackNews_19700110_002",
+      "text": "train/text/BlackNews_19700110_002.txt",
+      "raw": "train/raw/BlackNews_19700110_002.txt",
+      "meta": "train/meta/BlackNews_19700110_002.json",
+      "image": "train/images/BlackNews_19700110_002.jpg"
+    }
+  },
+  "counts": {
+    "train": 1,
+    "val": 0
+  }
+}

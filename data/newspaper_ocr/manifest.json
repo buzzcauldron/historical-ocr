@@ -1,0 +1,476 @@
+{
+  "version": 1,
+  "prepared_at": "2026-06-11T13:59:21+00:00",
+  "sources": [
+    {
+      "name": "chronicling_america",
+      "path": "/Users/halxiii/Projects/historical ocr/data/newspaper_gt",
+      "imported": 74
+    },
+    {
+      "name": "user_corrections",
+      "path": "/Users/halxiii/Projects/historical ocr/data/user_gt",
+      "imported": 1
+    }
+  ],
+  "records": {
+    "ca_sn82014385_1809-07-08_p1_e1": {
+      "split": "val",
+      "source": "chronicling_america",
+      "image": "val/images/ca_sn82014385_1809-07-08_p1_e1.jpg",
+      "text": "val/text/ca_sn82014385_1809-07-08_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-07-08_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-08_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-08_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-07-08_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-08_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-08_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-07-08_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-08_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-08_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-07-12_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-12_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-12_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-07-12_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-12_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-12_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-07-12_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-12_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-12_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-07-12_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-12_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-12_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-07-15_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-15_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-15_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-07-15_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-15_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-15_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-07-15_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-15_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-15_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-07-15_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-15_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-15_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-07-19_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-19_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-19_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-07-19_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-19_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-19_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-07-19_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-19_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-19_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-07-19_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-19_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-19_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-07-22_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-22_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-22_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-07-22_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-22_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-22_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-07-22_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-22_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-22_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-07-22_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-22_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-22_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-07-26_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-26_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-26_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-07-26_p2_e1": {
+      "split": "val",
+      "source": "chronicling_america",
+      "image": "val/images/ca_sn82014385_1809-07-26_p2_e1.jpg",
+      "text": "val/text/ca_sn82014385_1809-07-26_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-07-26_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-26_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-26_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-07-26_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-26_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-26_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-07-29_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-29_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-29_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-07-29_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-29_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-29_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-07-29_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-29_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-29_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-07-29_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-07-29_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-07-29_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-08-02_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-08-02_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-08-02_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-08-02_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-08-02_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-08-02_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-08-02_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-08-02_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-08-02_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-09-23_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-09-23_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-09-23_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-09-23_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-09-23_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-09-23_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-09-23_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-09-23_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-09-23_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-09-23_p4_e1": {
+      "split": "val",
+      "source": "chronicling_america",
+      "image": "val/images/ca_sn82014385_1809-09-23_p4_e1.jpg",
+      "text": "val/text/ca_sn82014385_1809-09-23_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-09-27_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-09-27_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-09-27_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-09-27_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-09-27_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-09-27_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-09-27_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-09-27_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-09-27_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-09-27_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-09-27_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-09-27_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-09-30_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-09-30_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-09-30_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-09-30_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-09-30_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-09-30_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-09-30_p3_e1": {
+      "split": "val",
+      "source": "chronicling_america",
+      "image": "val/images/ca_sn82014385_1809-09-30_p3_e1.jpg",
+      "text": "val/text/ca_sn82014385_1809-09-30_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-09-30_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-09-30_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-09-30_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-10-04_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-04_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-04_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-10-04_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-04_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-04_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-10-04_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-04_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-04_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-10-04_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-04_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-04_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-10-07_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-07_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-07_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-10-07_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-07_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-07_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-10-07_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-07_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-07_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-10-07_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-07_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-07_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-10-11_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-11_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-11_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-10-11_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-11_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-11_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-10-11_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-11_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-11_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-10-11_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-11_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-11_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-10-14_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-14_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-14_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-10-14_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-14_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-14_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-10-14_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-14_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-14_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-10-14_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-14_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-14_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-10-18_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-18_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-18_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-10-18_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-18_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-18_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-10-18_p3_e1": {
+      "split": "val",
+      "source": "chronicling_america",
+      "image": "val/images/ca_sn82014385_1809-10-18_p3_e1.jpg",
+      "text": "val/text/ca_sn82014385_1809-10-18_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-10-18_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-18_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-18_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-10-21_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-21_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-21_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-10-21_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-21_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-21_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-10-21_p3_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-21_p3_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-21_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-10-21_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-10-21_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-10-21_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-11-25_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-11-25_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-11-25_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-11-25_p2_e1": {
+      "split": "val",
+      "source": "chronicling_america",
+      "image": "val/images/ca_sn82014385_1809-11-25_p2_e1.jpg",
+      "text": "val/text/ca_sn82014385_1809-11-25_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-11-25_p3_e1": {
+      "split": "val",
+      "source": "chronicling_america",
+      "image": "val/images/ca_sn82014385_1809-11-25_p3_e1.jpg",
+      "text": "val/text/ca_sn82014385_1809-11-25_p3_e1.txt"
+    },
+    "ca_sn82014385_1809-11-25_p4_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-11-25_p4_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-11-25_p4_e1.txt"
+    },
+    "ca_sn82014385_1809-12-06_p1_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-12-06_p1_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-12-06_p1_e1.txt"
+    },
+    "ca_sn82014385_1809-12-06_p2_e1": {
+      "split": "train",
+      "source": "chronicling_america",
+      "image": "train/images/ca_sn82014385_1809-12-06_p2_e1.jpg",
+      "text": "train/text/ca_sn82014385_1809-12-06_p2_e1.txt"
+    },
+    "ca_sn82014385_1809-12-06_p3_e1": {
+      "split": "val",
+      "source": "chronicling_america",
+      "image": "val/images/ca_sn82014385_1809-12-06_p3_e1.jpg",
+      "text": "val/text/ca_sn82014385_1809-12-06_p3_e1.txt"
+    },
+    "user_BlackNews_19700110_002": {
+      "split": "train",
+      "source": "user_corrections",
+      "image": "train/images/user_BlackNews_19700110_002.jpg",
+      "text": "train/text/user_BlackNews_19700110_002.txt"
+    }
+  },
+  "counts": {
+    "train": 67,
+    "val": 8
+  },
+  "ketos": {
+    "train": "ketos/train.txt",
+    "val": "ketos/val.txt"
+  }
+}

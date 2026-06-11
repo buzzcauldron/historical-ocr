@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from historical_ocr.lib.handwriting_detect import (
     assess_handwriting,
+    classify_handwriting_extent,
     transcription_shell_hint,
     _layout_assessment,
 )
@@ -36,6 +37,20 @@ def test_layout_weak_ocr_triggers_handwriting() -> None:
 def test_layout_strong_print_not_handwriting() -> None:
     result = _layout_assessment(_layout(88.0, 90.0, 85.0))
     assert result is None
+
+
+def test_weak_ocr_alone_not_partial_on_print() -> None:
+    assert (
+        classify_handwriting_extent(
+            likely_handwriting=False,
+            manuscript_score=0.2,
+            weak_line_ratio=0.15,
+            mean_conf=75.0,
+            weak_line_count=3,
+            fingerprint_manuscript=False,
+        )
+        == "none"
+    )
 
 
 def test_fingerprint_manuscript_signal() -> None:

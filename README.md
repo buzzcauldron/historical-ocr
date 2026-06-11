@@ -4,8 +4,6 @@ Self-contained orchestrator for **computational-ready text** from historical sou
 
 **New here?** See **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** — plain-language setup, GUI walkthrough, and what `document.txt` / `document.xml` mean (no OCR jargon required).
 
-This repo vendors only the small, reusable pieces from sibling projects. Heavy tools run as **optional external CLIs** when installed on `PATH`.
-
 ## What lives here vs elsewhere
 
 | Capability | In this repo | External tool (optional) |
@@ -67,6 +65,8 @@ jobs/<job_id>/
       txt/ xml/ tei/ corpus.jsonl
   ocr/*.txt              # raw print OCR (internal)
   clean/*.txt            # Underwood-normalized (internal)
+  *.review.png           # optional glyph-machina heatmap for problem pages
+  *.review.json          # glyph-machina metadata for dropped/low-confidence glyphs
 ```
 
 ## Desktop GUI

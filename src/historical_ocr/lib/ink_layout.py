@@ -79,13 +79,256 @@ class InkLayout:
         )
 
 
+_INK_THRESHOLD = 175
+_BODY_MAX_INK_SPAN_FRAC = 0.55
+
+
+def _smooth_1d(data, kernel: int):
+    if np is None:
+        return data
+    if kernel % 2 == 0:
+        kernel += 1
+    pad = kernel // 2
+    padded = np.pad(data, (pad, pad), mode="edge")
+    return np.convolve(padded, np.ones(kernel) / kernel, mode="valid")
+
+
+def _longest_ink_run(row) -> int:
+    best = 0
+    run = 0
+    for pixel in row:
+        if pixel:
+            run += 1
+            if run > best:
+                best = run
+        else:
+            run = 0
+    return best
+
+
+def _body_row_mask(ink, *, max_ink_span_frac: float = _BODY_MAX_INK_SPAN_FRAC):
+    """Exclude rows whose longest continuous ink span crosses most of the page width."""
+    h, w = ink.shape
+    if w <= 0:
+        return np.zeros(h, dtype=bool) if np is not None else []
+
+    body = np.zeros(h, dtype=bool)
+    threshold = w * max_ink_span_frac
+    for y in range(h):
+        if not ink[y].any():
+            continue
+        if _longest_ink_run(ink[y]) < threshold:
+            body[y] = True
+    return body
+
+
+def vertical_ink_projection(
+    gray,
+    *,
+    max_ink_span_frac: float = _BODY_MAX_INK_SPAN_FRAC,
+    ink_threshold: int = _INK_THRESHOLD,
+):
+    """1D ink-density profile from body text rows (heatmap column-sum)."""
+    if np is None:
+        return None
+
+    arr = np.asarray(gray, dtype=np.uint8)
+    if arr.ndim != 2:
+        return None
+
+    ink = arr < ink_threshold
+    body = _body_row_mask(ink, max_ink_span_frac=max_ink_span_frac)
+    proj = (ink & body[:, None]).sum(axis=0).astype(np.float64)
+    w = arr.shape[1]
+    kernel = max(9, w // 100)
+    return _smooth_1d(proj, kernel)
+
+
+def _active_ink_zone_columns(
+    sm,
+    w: int,
+    *,
+    min_column_frac: float,
+) -> list[tuple[int, int]]:
+    """Columns as separated high-ink plateaus in the vertical heatmap."""
+    min_w = int(w * min_column_frac)
+    for thresh_frac in (0.32, 0.26, 0.20, 0.15):
+        threshold = float(sm.max()) * thresh_frac
+        active = sm > threshold
+        runs: list[tuple[int, int]] = []
+        start: int | None = None
+        for x in range(w):
+            if active[x]:
+                if start is None:
+                    start = x
+            elif start is not None:
+                if x - start >= min_w:
+                    runs.append((start, x))
+                start = None
+        if start is not None and w - start >= min_w:
+            runs.append((start, w))
+        if len(runs) >= 2:
+            return runs
+    return []
+
+
+def _split_widest_into_n(
+    sm,
+    w: int,
+    n: int,
+    *,
+    min_column_frac: float,
+) -> list[tuple[int, int]]:
+    """Recursively split the widest column at the deepest ink gutter."""
+    min_w = int(w * min_column_frac)
+    bounds = [(0, w)]
+    while len(bounds) < n:
+        widest_i = max(range(len(bounds)), key=lambda i: bounds[i][1] - bounds[i][0])
+        x0, x1 = bounds[widest_i]
+        if x1 - x0 < 2 * min_w:
+            break
+        interior = range(x0 + min_w, x1 - min_w + 1)
+        if not interior:
+            break
+        split = min(interior, key=lambda x: sm[x])
+        bounds = bounds[:widest_i] + [(x0, split), (split, x1)] + bounds[widest_i + 1 :]
+    return bounds if len(bounds) >= 2 else []
+
+
+def _photo_heavy_fraction(gray) -> float:
+    """Share of rows with a wide ink span (illustrations, mastheads)."""
+    if np is None:
+        return 0.0
+
+    arr = np.asarray(gray, dtype=np.uint8)
+    if arr.ndim != 2:
+        return 0.0
+
+    ink = arr < _INK_THRESHOLD
+    h, w = ink.shape
+    if h <= 0 or w <= 0:
+        return 0.0
+
+    wide_rows = sum(
+        1 for y in range(h) if ink[y].any() and _longest_ink_run(ink[y]) >= w * 0.45
+    )
+    return wide_rows / h
+
+
+_MIN_INTERIOR_INK_FRAC = 0.12
+_MIN_FIRST_COL_INK_FRAC = 0.18
+_MIN_EDGE_INK_FRAC = 0.05
+_MIN_SUBSTANTIVE_INK_FRAC = 0.14
+
+
+def _column_ink_masses_ok(bounds: list[tuple[int, int]], sm) -> bool:
+    """Reject splits that carve out low-ink slivers between real columns."""
+    masses = [float(sm[x0:x1].sum()) for x0, x1 in bounds]
+    total = sum(masses)
+    if total <= 0:
+        return False
+
+    rel = [mass / total for mass in masses]
+    n = len(bounds)
+
+    for j in range(1, n - 1):
+        if rel[j] < _MIN_INTERIOR_INK_FRAC:
+            return False
+
+    if n >= 4 and rel[0] < _MIN_FIRST_COL_INK_FRAC:
+        return False
+
+    for j in (0, n - 1):
+        if rel[j] < _MIN_EDGE_INK_FRAC:
+            return False
+
+    substantive = sum(1 for fraction in rel if fraction >= _MIN_SUBSTANTIVE_INK_FRAC)
+    if n >= 3 and substantive < n:
+        edge_thin = rel[0] < _MIN_SUBSTANTIVE_INK_FRAC or rel[-1] < _MIN_SUBSTANTIVE_INK_FRAC
+        if not (edge_thin and substantive >= n - 1):
+            return False
+
+    return True
+
+
+def _column_widths_ok(widths: list[int]) -> bool:
+    """Allow a thin margin strip; require core columns to be reasonably even."""
+    n = len(widths)
+    if n < 2:
+        return False
+
+    mean = sum(widths) / n
+    if mean <= 0:
+        return False
+
+    if n == 2:
+        return min(widths) / max(widths) >= 0.08
+
+    core = [w for w in widths if w >= mean * 0.32]
+    if len(core) < 2:
+        return False
+
+    core_mean = sum(core) / len(core)
+    return min(core) / core_mean >= 0.35
+
+
+def _score_column_layout(
+    bounds: list[tuple[int, int]],
+    sm,
+    *,
+    photo_frac: float = 0.0,
+) -> float:
+    widths = [x1 - x0 for x0, x1 in bounds]
+    n = len(widths)
+    if n < 2 or not _column_widths_ok(widths) or not _column_ink_masses_ok(bounds, sm):
+        return -1e9
+
+    mean = sum(widths) / n
+    cv = (sum((width - mean) ** 2 for width in widths) / n) ** 0.5 / mean
+    gutter = sum(float(sm.max()) - float(sm[x1]) for _, x1 in bounds[:-1])
+    uniformity = max(0.0, 1.0 - cv / 0.35)
+    bonus = {2: 250, 3: 400, 4: 550, 5: 200}.get(n, -200) * uniformity
+    over_cols_penalty = -2400 * max(0, n - 4)
+    if photo_frac >= 0.12 and n > 3:
+        over_cols_penalty -= 500 * (n - 3)
+    return gutter - cv * 400 + bonus + over_cols_penalty
+
+
+def _pick_best_column_layout(
+    candidates: list[list[tuple[int, int]]],
+    sm,
+    *,
+    photo_frac: float = 0.0,
+) -> list[tuple[int, int]]:
+    scored: list[tuple[float, list[tuple[int, int]]]] = []
+    for bounds in candidates:
+        if len(bounds) < 2:
+            continue
+        score = _score_column_layout(bounds, sm, photo_frac=photo_frac)
+        if score > -1e8:
+            scored.append((score, bounds))
+    if not scored:
+        return []
+
+    best_score, best_bounds = max(scored, key=lambda item: item[0])
+    close_eps = 250.0
+    for score, bounds in sorted(scored, key=lambda item: (-item[0], len(item[1]))):
+        if (
+            len(bounds) < len(best_bounds)
+            and best_score - score <= close_eps
+        ):
+            return bounds
+    return best_bounds
+
+
 def detect_column_bounds(
     gray,
     *,
     min_gutter_px: int = 14,
     min_column_frac: float = 0.12,
+    max_ink_span_frac: float = _BODY_MAX_INK_SPAN_FRAC,
 ) -> list[tuple[int, int]]:
-    """Return ``(x0, x1)`` pixel ranges for text columns from a vertical ink projection."""
+    """Return ``(x0, x1)`` column ranges from the ink-zone vertical heatmap."""
     if np is None:
         w = gray.shape[1] if hasattr(gray, "shape") else 0
         return [(0, w)]
@@ -94,46 +337,42 @@ def detect_column_bounds(
     if arr.ndim != 2:
         return [(0, arr.shape[1])]
 
-    h, w = arr.shape
-    sample = arr[: max(1, int(h * 0.92)), :]
-    ink = sample < 175
-    proj = ink.sum(axis=0).astype(np.float64)
-    if proj.max() <= 0:
+    w = arr.shape[1]
+    sm = vertical_ink_projection(arr, max_ink_span_frac=max_ink_span_frac)
+    if sm is None or sm.max() <= 0:
         return [(0, w)]
 
-    kernel = max(5, w // 200)
-    if kernel % 2 == 0:
-        kernel += 1
-    pad = kernel // 2
-    padded = np.pad(proj, (pad, pad), mode="edge")
-    smoothed = np.convolve(padded, np.ones(kernel) / kernel, mode="valid")
+    candidates: list[list[tuple[int, int]]] = []
 
-    threshold = float(smoothed.max()) * 0.08
-    gutters: list[int] = []
-    in_gutter = False
-    gutter_start = 0
-    for x in range(w):
-        if smoothed[x] <= threshold:
-            if not in_gutter:
-                gutter_start = x
-                in_gutter = True
-        elif in_gutter:
-            if x - gutter_start >= min_gutter_px:
-                gutters.append((gutter_start + x) // 2)
-            in_gutter = False
+    zones = _active_ink_zone_columns(sm, w, min_column_frac=min_column_frac)
+    if len(zones) >= 2:
+        candidates.append(zones)
 
-    if not gutters:
-        return [(0, w)]
+    for n in range(2, 6):
+        split = _split_widest_into_n(
+            sm,
+            w,
+            n,
+            min_column_frac=max(min_column_frac, 0.10),
+        )
+        if len(split) >= 2:
+            candidates.append(split)
 
-    splits = [0, *gutters, w]
-    min_w = int(w * min_column_frac)
-    columns: list[tuple[int, int]] = []
-    for i in range(len(splits) - 1):
-        x0, x1 = splits[i], splits[i + 1]
-        if x1 - x0 >= min_w:
-            columns.append((x0, x1))
-
+    photo_frac = _photo_heavy_fraction(arr)
+    columns = _pick_best_column_layout(candidates, sm, photo_frac=photo_frac)
     return columns if len(columns) >= 2 else [(0, w)]
+
+
+def column_bounds_from_layout(layout: InkLayout) -> list[tuple[int, int]]:
+    return [(col.left, col.left + col.width) for col in layout.columns]
+
+
+def has_multiple_columns(gray, **kwargs) -> bool:
+    return len(detect_column_bounds(gray, **kwargs)) >= 2
+
+
+def column_count_from_ink_zones(gray, **kwargs) -> int:
+    return len(detect_column_bounds(gray, **kwargs))
 
 
 def detect_horizontal_bands(
@@ -333,7 +572,7 @@ def render_ink_layout_heatmap(
     """Overlay detected columns (cyan) and ink bands (indigo/teal) on the page scan."""
     from PIL import Image, ImageDraw
 
-    if not layout.sections:
+    if not layout.columns and not layout.sections:
         return False
 
     image_path = Path(image_path)

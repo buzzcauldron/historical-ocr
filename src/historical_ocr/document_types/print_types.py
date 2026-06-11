@@ -217,4 +217,6 @@ def apply_print_doc_type(settings: Settings, spec: PrintDocumentTypeSpec) -> Set
         "ocr_combination": settings.ocr_combination or spec.ocr_combination,
         "normalization_mode": spec.normalization_mode,
     }
+    if spec.name == "twentieth_century":
+        updates["text_slice_only"] = True
     return settings.model_copy(update=updates)

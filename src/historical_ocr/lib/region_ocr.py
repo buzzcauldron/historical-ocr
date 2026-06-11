@@ -16,6 +16,7 @@ class RegionBox:
     width: int
     height: int
     sort_col: int = 0
+    sort_subcol: int = 0
     sort_band: int = 0
     section_id: int | None = None
     pad: int = 4
@@ -27,22 +28,41 @@ def merge_region_results(
     page_width: int,
     page_height: int,
     sections: tuple = (),
+    crop_origins: list[tuple[int, int]] | None = None,
 ) -> LayoutOcrResult:
-    ordered: list[tuple[int, int, int, OcrLine]] = []
-    for region, result in results:
+    """Merge per-region OCR into column-major reading order.
+
+    When *crop_origins* is set (one ``(x0, y0)`` per result), line boxes are
+    crop-relative and positioned with the crop origin. Otherwise lines are
+    positioned with ``region.left`` / ``region.top`` (legacy callers).
+    """
+    ordered: list[tuple[int, int, int, int, OcrLine]] = []
+    for i, (region, result) in enumerate(results):
+        if crop_origins is not None:
+            ox, oy = crop_origins[i]
+        else:
+            ox, oy = region.left, region.top
+        x_min = region.left
+        x_max = region.left + region.width
         for line in result.lines:
             if not line.text.strip():
+                continue
+            abs_left = line.left + ox
+            abs_top = line.top + oy
+            line_right = abs_left + line.width
+            if line_right <= x_min or abs_left >= x_max:
                 continue
             ordered.append(
                 (
                     region.sort_col,
+                    region.sort_subcol,
                     region.sort_band,
-                    line.top,
+                    abs_top,
                     OcrLine(
                         line_num=0,
                         text=line.text,
-                        left=line.left + region.left,
-                        top=line.top + region.top,
+                        left=abs_left,
+                        top=abs_top,
                         width=line.width,
                         height=line.height,
                         conf=line.conf,
@@ -51,8 +71,9 @@ def merge_region_results(
                 ),
             )
 
-    ordered.sort(key=lambda item: (item[0], item[1], item[2]))
-    lines = [replace(line, line_num=i) for i, (_, _, _, line) in enumerate(ordered, start=1)]
+    # Column-major: page column, vertical band, sub-column x-order, then line top.
+    ordered.sort(key=lambda item: (item[0], item[2], item[1], item[3]))
+    lines = [replace(line, line_num=i) for i, (_, _, _, _, line) in enumerate(ordered, start=1)]
     full_text = "\n".join(l.text for l in lines if l.text.strip())
     return LayoutOcrResult(
         lines=lines,
@@ -92,6 +113,7 @@ def ocr_image_regions(
     _log(f"{log_label}: {len(regions)} regions on {image.name}")
 
     region_results: list[tuple[RegionBox, LayoutOcrResult]] = []
+    crop_origins: list[tuple[int, int]] = []
     for region in regions:
         pad = region.pad
         x0 = max(0, region.left - pad)
@@ -107,10 +129,9 @@ def ocr_image_regions(
             psm=psm,
             settings=settings,
             filter_opts=filter_opts,
-            x_offset=x0,
-            y_offset=y0,
         )
         region_results.append((region, result))
+        crop_origins.append((x0, y0))
 
     if not region_results:
         return None
@@ -119,4 +140,5 @@ def ocr_image_regions(
         region_results,
         page_width=page_width,
         page_height=page_height,
+        crop_origins=crop_origins,
     )

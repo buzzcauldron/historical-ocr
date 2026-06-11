@@ -120,7 +120,8 @@ def classify_handwriting_extent(
     if likely_handwriting and weak_line_ratio < partial_max_weak_ratio and weak_line_count >= 1:
         partial_signals += 1
 
-    if partial_signals >= 1 and weak_line_ratio < 0.55:
+    min_signals = 1 if likely_handwriting else 2
+    if partial_signals >= min_signals and weak_line_ratio < 0.55:
         return "partial"
     if likely_handwriting:
         return "full"
