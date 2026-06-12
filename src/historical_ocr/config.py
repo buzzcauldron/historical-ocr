@@ -387,7 +387,7 @@ class Settings(BaseSettings):
     )
 
     figure_extract_enabled: bool = Field(
-        default=True,
+        default=False,
         validation_alias="HISTORICAL_OCR_FIGURE_EXTRACT_ENABLED",
     )
     figure_extract_backend: str = Field(
