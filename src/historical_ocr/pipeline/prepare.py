@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from typing import Callable
 
 from historical_ocr.config import JobPaths, Settings
 from historical_ocr.image_tools.convert import normalize_page_image
@@ -41,19 +42,26 @@ def prepare_pages(
     job: JobPaths,
     manifest: JobManifest,
     settings: Settings,
+    log_fn: Callable[[str], None] | None = None,
 ) -> list[PageRecord]:
+    def _log(msg: str) -> None:
+        if log_fn:
+            log_fn(msg)
+
     job.ensure()
     pages: list[PageRecord] = []
 
     for src in sources:
         suffix = src.suffix.lower()
         if suffix == _PDF_SUFFIX:
+            _log(f"prepare: rendering {src.name} → pages/")
             rendered = extract_pdf_pages(
                 src,
                 job.pages,
                 dpi=settings.pdf_dpi,
                 jpeg_quality=settings.jpeg_quality,
             )
+            _log(f"prepare: {src.name} → {len(rendered)} page image(s)")
             for i, img in enumerate(rendered):
                 normalized = _normalize_into_pages(
                     img,
@@ -67,6 +75,7 @@ def prepare_pages(
                     ),
                 )
         elif suffix in _IMAGE_SUFFIXES:
+            _log(f"prepare: normalizing {src.name}")
             dest = job.pages / f"{src.stem}.jpg"
             normalized = _normalize_into_pages(src, dest, settings)
             pages.append(
@@ -78,5 +87,6 @@ def prepare_pages(
         else:
             raise ValueError(f"Unsupported source: {src}")
 
+    _log(f"prepare: {len(pages)} page(s) ready")
     manifest.pages = pages
     return pages

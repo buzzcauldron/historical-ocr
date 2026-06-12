@@ -124,8 +124,14 @@ def run_job(
         print_language=print_language if print_language is not None else s.print_language,
     )
 
-    from historical_ocr.lib.resource_policy import apply_background_priority, resource_status_line
+    from historical_ocr.lib.resource_policy import (
+        allow_sleep,
+        apply_background_priority,
+        prevent_sleep,
+        resource_status_line,
+    )
 
+    prevent_sleep()
     if getattr(s, "background_mode", False):
         apply_background_priority()
 
@@ -165,16 +171,16 @@ def run_job(
                 progress.done += 1
                 _emit_progress()
         if inputs:
-            sources.extend(ingest_local(inputs, job, manifest))
+            sources.extend(ingest_local(inputs, job, manifest, log_fn=_log))
     elif inputs:
-        sources = ingest_local(inputs, job, manifest)
+        sources = ingest_local(inputs, job, manifest, log_fn=_log)
     else:
         sources = _discover_sources(job.source)
         if not sources:
             raise ValueError("Provide --url, --input, or populate jobs/<id>/source/")
 
     _stage("prepare", total=max(1, len(sources)))
-    prepare_pages(sources, job, manifest, s)
+    prepare_pages(sources, job, manifest, s, log_fn=_log)
     if progress is not None:
         progress.done = progress.total or 1
         _emit_progress()
@@ -252,9 +258,11 @@ def run_job(
         export_internal=s.export_internal,
         tei_facsimile=s.tei_facsimile,
         settings=s,
+        log_fn=_log,
     )
     if progress is not None and log_fn is not None:
         progress.finish(log_fn)
+    allow_sleep()
     return manifest
 
 

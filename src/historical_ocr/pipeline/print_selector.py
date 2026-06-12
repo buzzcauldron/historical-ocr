@@ -198,6 +198,8 @@ def run_tesseract_backend(
         if detected_columns is not None:
             return _finish(detected_columns)
 
+        if log_fn:
+            log_fn(f"ocr-route: full-page (psm={psm})")
         return _finish(
             ocr_fn(
                 path,

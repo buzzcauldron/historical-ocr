@@ -119,7 +119,12 @@ def export_job(
     export_internal: bool = True,
     tei_facsimile: bool = True,
     settings: Settings | None = None,
+    log_fn=None,
 ) -> dict[str, str]:
+    def _log(msg: str) -> None:
+        if log_fn:
+            log_fn(msg)
+
     job.ensure()
     internal = job.export / "_internal"
     txt_dir = internal / "txt"
@@ -131,6 +136,7 @@ def export_job(
 
     basename = resolve_export_basename(manifest)
     manifest.export_basename = basename
+    _log(f"export: building {basename}.*")
     paths = production_paths(job.export, basename)
     document_txt = paths["txt"]
     document_xml = paths["xml"]
@@ -181,7 +187,9 @@ def export_job(
                 ),
             )
 
+    _log(f"export: merging {len(slices)} page(s) → {document_txt.name}")
     document_txt.write_text(merge_document_txt(slices), encoding="utf-8")
+    _log(f"export: writing TEI → {document_xml.name}")
     write_document_tei(
         document_xml,
         slices,
@@ -264,4 +272,5 @@ def export_job(
             },
         )
     job.manifest.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+    _log(f"export: complete → {document_txt.relative_to(job.root)}")
     return manifest.export

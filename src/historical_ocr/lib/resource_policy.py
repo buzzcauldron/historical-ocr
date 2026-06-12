@@ -3,12 +3,42 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 import time
 from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     from historical_ocr.config import Settings
+
+_caffeinate_proc: subprocess.Popen | None = None
+
+
+def prevent_sleep() -> None:
+    """Prevent macOS from suspending the process on lid close.
+
+    Spawns `caffeinate -i -w <pid>` which holds a system idle-sleep assertion
+    tied to this process's lifetime. No-op on non-macOS.
+    """
+    global _caffeinate_proc
+    if sys.platform != "darwin" or _caffeinate_proc is not None:
+        return
+    try:
+        _caffeinate_proc = subprocess.Popen(
+            ["caffeinate", "-i", "-w", str(os.getpid())],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except (FileNotFoundError, OSError):
+        pass
+
+
+def allow_sleep() -> None:
+    """Release the caffeinate assertion (called after job completes)."""
+    global _caffeinate_proc
+    if _caffeinate_proc is not None:
+        _caffeinate_proc.terminate()
+        _caffeinate_proc = None
 
 _OCR_WORKERS = {
     "conservative": 1,
