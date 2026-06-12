@@ -4,13 +4,20 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECTS="$(cd "$ROOT/.." && pwd)"
 VENV="$ROOT/.venv"
 
-# ── macOS: system Tk required by tkinterdnd2 (GUI drag-and-drop) ─────────────
-# Homebrew Python does not bundle tkinter; install python-tk before creating the venv.
+# ── System Tk (required by tkinterdnd2 for GUI drag-and-drop) ────────────────
 if [[ "$(uname)" == "Darwin" ]] && command -v brew >/dev/null 2>&1; then
+  # Homebrew Python does not bundle tkinter — install the matching python-tk formula.
   PY_VER="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
   if ! python3 -c "import tkinter" 2>/dev/null; then
     echo "→ installing python-tk@${PY_VER} (required for GUI)…"
     brew install "python-tk@${PY_VER}" || brew install python-tk || true
+  else
+    echo "→ tkinter: OK"
+  fi
+elif command -v apt-get >/dev/null 2>&1; then
+  if ! python3 -c "import tkinter" 2>/dev/null; then
+    echo "→ installing python3-tk (required for GUI)…"
+    sudo apt-get install -y python3-tk || true
   else
     echo "→ tkinter: OK"
   fi
@@ -43,14 +50,21 @@ else
       tesseract-ocr-eng tesseract-ocr-lat tesseract-ocr-deu \
       tesseract-ocr-fra tesseract-ocr-ita tesseract-ocr-spa \
       tesseract-ocr-script-fraktur || true
+  elif command -v dnf >/dev/null 2>&1; then
+    sudo dnf install -y tesseract tesseract-langpack-eng tesseract-langpack-deu \
+      tesseract-langpack-fra tesseract-langpack-ita tesseract-langpack-spa poppler-utils || true
   else
-    echo "  warn: install tesseract manually — brew install tesseract tesseract-lang poppler"
+    echo "  warn: install tesseract manually — brew install tesseract (macOS) or apt install tesseract-ocr (Linux)"
   fi
 fi
 
 # Verify poppler (pdf2image dependency)
 if ! command -v pdftoppm >/dev/null 2>&1; then
-  echo "  warn: poppler not found (needed for PDF → image); install: brew install poppler"
+  if command -v brew >/dev/null 2>&1; then
+    echo "  warn: poppler not found; run: brew install poppler"
+  else
+    echo "  warn: poppler not found; run: sudo apt install poppler-utils"
+  fi
 fi
 
 # ── Optional editable siblings (override PyPI/git installs for local dev) ────
