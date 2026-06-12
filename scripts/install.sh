@@ -5,22 +5,21 @@ PROJECTS="$(cd "$ROOT/.." && pwd)"
 VENV="$ROOT/.venv"
 
 # ── System Tk (required by tkinterdnd2 for GUI drag-and-drop) ────────────────
-if [[ "$(uname)" == "Darwin" ]] && command -v brew >/dev/null 2>&1; then
+if python3 -c "import tkinter" 2>/dev/null; then
+  echo "→ tkinter: OK"
+elif [[ -n "${CONDA_PREFIX:-}" ]] && command -v conda >/dev/null 2>&1; then
+  echo "→ installing tk via conda (required for GUI)…"
+  conda install -y tk || true
+elif [[ "$(uname)" == "Darwin" ]] && command -v brew >/dev/null 2>&1; then
   # Homebrew Python does not bundle tkinter — install the matching python-tk formula.
   PY_VER="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
-  if ! python3 -c "import tkinter" 2>/dev/null; then
-    echo "→ installing python-tk@${PY_VER} (required for GUI)…"
-    brew install "python-tk@${PY_VER}" || brew install python-tk || true
-  else
-    echo "→ tkinter: OK"
-  fi
+  echo "→ installing python-tk@${PY_VER} (required for GUI)…"
+  brew install "python-tk@${PY_VER}" || brew install python-tk || true
 elif command -v apt-get >/dev/null 2>&1; then
-  if ! python3 -c "import tkinter" 2>/dev/null; then
-    echo "→ installing python3-tk (required for GUI)…"
-    sudo apt-get install -y python3-tk || true
-  else
-    echo "→ tkinter: OK"
-  fi
+  echo "→ installing python3-tk (required for GUI)…"
+  sudo apt-get install -y python3-tk || true
+else
+  echo "  warn: tkinter not found — install python3-tk (Linux) or python-tk via Homebrew (macOS)"
 fi
 
 # ── Virtual environment + Python deps ────────────────────────────────────────
