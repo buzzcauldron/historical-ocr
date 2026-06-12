@@ -43,7 +43,6 @@ dependencies = [
   "ocr-cleanup @ git+https://github.com/buzzcauldron/ocr-cleanup.git",
   "bib-ocr @ git+https://github.com/buzzcauldron/bib-ocr.git",
   "strigil @ git+https://github.com/buzzcauldron/strigil.git",
-  "transcriber-shell @ git+https://github.com/buzzcauldron/transcription-shell.git",
 ]
 
 [project.optional-dependencies]
