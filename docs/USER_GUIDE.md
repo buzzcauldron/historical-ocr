@@ -1,6 +1,6 @@
 # Historical OCR — guide for non-experts
 
-This tool turns **scanned books, PDFs, and page images** into **plain text** you can search, quote, and reuse. It is aimed at historians, librarians, and researchers who have source material but do not want to become OCR engineers.
+This tool turns **scanned books, PDFs, and page images** into **plain text** you can search, quote, and reuse. It is aimed at historians, librarians, and researchers who have source material and want a simple tool to make passable ocr scans of tricky historical documents. Send a DM for suggestions and bugs.
 
 ---
 
@@ -146,7 +146,7 @@ If you only work with **printed** material, you can skip all of this.
 A few seconds per page for print OCR on a modern laptop. Large PDFs and manuscript runs can take much longer.
 
 **Will the text be perfect?**  
-No OCR is perfect, especially on damaged scans or unusual type. For old printed English after about 1700, the tool can **normalize** spelling (optional, on by default) so the text is easier to compare with modern sources.
+No OCR is perfect, especially on damaged scans or unusual type. For printed English after about 1700, the tool can **normalize** spelling (optional, on by default) so the text is easier to compare with modern sources.
 
 **My PDF already has selectable text — why OCR?**  
 The tool tries embedded text first when that option is on. OCR is a fallback for scanned pages where the text layer is missing or poor.
