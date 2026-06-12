@@ -2,6 +2,9 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [project]
 name = "historical-ocr"
 version = "0.1.0"
@@ -31,19 +34,31 @@ dependencies = [
   "pyarrow>=15.0",
   "tkinterdnd2>=0.4.0",
   "google-generativeai>=0.7",
-  "pytest>=8.0",
+  "ocr-cleanup>=0.1",
+  "bib-ocr>=0.1",
+  "transformers>=4.30",
+  "ultralytics>=8.0",
+  "matplotlib>=3.7",
+  "scipy>=1.10",
+  "strigil>=0.1",
+  "playwright>=1.40",
+  "transcriber-shell @ git+https://github.com/buzzcauldron/transcription-shell.git",
 ]
 
 [project.optional-dependencies]
+dev = ["pytest>=8.0"]
+# Legacy extras — same packages are in base install; kept so old pip commands still work.
+ml = ["torch>=2.2", "torchvision>=0.17", "datasets>=2.18", "huggingface_hub>=0.23", "pyarrow>=15.0"]
+pdf = ["pymupdf>=1.24", "numpy>=1.24", "pypdf>=4.0.0", "pdf2image>=1.16.0"]
 figures = ["ultralytics>=8.0"]
-transcriber = ["transcriber-shell>=0.1"]
+trocr = ["transformers>=4.30"]
+transcriber = ["transcriber-shell @ git+https://github.com/buzzcauldron/transcription-shell.git"]
 strigil = ["strigil>=0.1"]
 suite = [
   "historical-ocr[figures]",
-  "transcriber-shell>=0.1",
   "strigil>=0.1",
+  "transcriber-shell @ git+https://github.com/buzzcauldron/transcription-shell.git",
 ]
-dev = ["pytest>=8.0"]
 
 [project.scripts]
 historical-ocr = "historical_ocr.cli:main"

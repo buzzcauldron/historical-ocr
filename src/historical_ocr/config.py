@@ -149,6 +149,24 @@ class Settings(BaseSettings):
         le=16,
         validation_alias="HISTORICAL_OCR_PARALLEL_PAGES",
     )
+    power_aware: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_POWER_AWARE",
+    )
+    background_mode: bool = Field(
+        default=False,
+        validation_alias="HISTORICAL_OCR_BACKGROUND_MODE",
+    )
+    auto_resume: bool = Field(
+        default=True,
+        validation_alias="HISTORICAL_OCR_AUTO_RESUME",
+    )
+    max_page_retries: int = Field(
+        default=2,
+        ge=0,
+        le=8,
+        validation_alias="HISTORICAL_OCR_MAX_PAGE_RETRIES",
+    )
     jpeg_optimize: bool = Field(
         default=True,
         validation_alias="HISTORICAL_OCR_JPEG_OPTIMIZE",
@@ -303,6 +321,32 @@ class Settings(BaseSettings):
         ge=0,
         le=80,
         validation_alias="HISTORICAL_OCR_DAMAGE_LLM_MAX_LINES",
+    )
+    trocr_enabled: bool = Field(
+        default=False,
+        validation_alias="HISTORICAL_OCR_TROCR_ENABLED",
+    )
+    trocr_model: str = Field(
+        default="microsoft/trocr-base-printed",
+        validation_alias="HISTORICAL_OCR_TROCR_MODEL",
+    )
+    trocr_conf_threshold: float = Field(
+        default=62.0,
+        ge=0.0,
+        le=100.0,
+        validation_alias="HISTORICAL_OCR_TROCR_CONF",
+    )
+    trocr_max_lines: int = Field(
+        default=24,
+        ge=0,
+        le=120,
+        validation_alias="HISTORICAL_OCR_TROCR_MAX_LINES",
+    )
+    trocr_repair_conf: float = Field(
+        default=78.0,
+        ge=0.0,
+        le=100.0,
+        validation_alias="HISTORICAL_OCR_TROCR_REPAIR_CONF",
     )
     deskew_enabled: bool = Field(
         default=True,

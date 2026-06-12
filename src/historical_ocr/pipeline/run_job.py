@@ -16,6 +16,7 @@ from historical_ocr.pipeline.prepare import prepare_pages
 from historical_ocr.pipeline.clean import clean_print_pages
 from historical_ocr.document_types.print_types import apply_print_doc_type
 from historical_ocr.pipeline.print_route import ocr_pages, resolve_print_spec
+from historical_ocr.lib.job_progress import JobProgress, wrap_log_fn
 from historical_ocr.pipeline.route import apply_routes
 
 _PDF = ".pdf"
@@ -59,6 +60,7 @@ def run_job(
     text_slice_only: bool | None = None,
     text_slice_include_ads: bool | None = None,
     text_slice_include_figures: bool | None = None,
+    trocr: bool | None = None,
     log_fn: Callable[[str], None] | None = None,
     **_: object,
 ) -> JobManifest:
@@ -108,6 +110,8 @@ def run_job(
         updates["text_slice_include_ads"] = text_slice_include_ads
     if text_slice_include_figures is not None:
         updates["text_slice_include_figures"] = text_slice_include_figures
+    if trocr is not None:
+        updates["trocr_enabled"] = trocr
     if updates:
         s = s.model_copy(update=updates)
     job = JobPaths((s.jobs_dir / job_id).expanduser().resolve())
@@ -120,9 +124,30 @@ def run_job(
         print_language=print_language if print_language is not None else s.print_language,
     )
 
-    def _log(msg: str) -> None:
-        if log_fn:
-            log_fn(msg)
+    from historical_ocr.lib.resource_policy import apply_background_priority, resource_status_line
+
+    if getattr(s, "background_mode", False):
+        apply_background_priority()
+
+    progress = JobProgress() if log_fn else None
+    _log: Callable[[str], None]
+    if log_fn:
+        _log = wrap_log_fn(log_fn, progress)  # type: ignore[assignment]
+    else:
+        def _log(msg: str) -> None:
+            pass
+
+    status = resource_status_line(s)
+    if status:
+        _log(status)
+
+    def _stage(name: str, total: int | None = None) -> None:
+        if log_fn is not None:
+            _log.set_stage(name, total=total)  # type: ignore[attr-defined]
+
+    def _emit_progress() -> None:
+        if progress is not None and log_fn is not None:
+            progress.emit_if_changed(log_fn)
 
     if mode not in ("print",):
         _log(f"note: --mode {mode} ignored (print-only)")
@@ -132,9 +157,13 @@ def run_job(
         all_urls.insert(0, url)
 
     if all_urls:
+        _stage("acquire", total=len(all_urls))
         sources = []
         for u in all_urls:
             sources.extend(acquire_from_url(u, job, manifest, limit=limit, log_fn=_log))
+            if progress is not None:
+                progress.done += 1
+                _emit_progress()
         if inputs:
             sources.extend(ingest_local(inputs, job, manifest))
     elif inputs:
@@ -144,7 +173,11 @@ def run_job(
         if not sources:
             raise ValueError("Provide --url, --input, or populate jobs/<id>/source/")
 
+    _stage("prepare", total=max(1, len(sources)))
     prepare_pages(sources, job, manifest, s)
+    if progress is not None:
+        progress.done = progress.total or 1
+        _emit_progress()
 
     pdf_sources = [p for p in sources if p.suffix.lower() == _PDF]
     if s.fingerprint_enabled and pdf_sources:
@@ -179,6 +212,8 @@ def run_job(
     resolved = apply_routes(manifest, "print", job_root=job.root, settings=s, log_fn=_log)
     manifest.resolved_material = resolved  # type: ignore[assignment]
 
+    print_count = sum(1 for p in manifest.pages if p.route == "print")
+
     print_spec = resolve_print_spec(s, manifest)
     manifest.print_language = s.print_language
     s = apply_print_doc_type(s, print_spec)
@@ -187,6 +222,9 @@ def run_job(
     if ocr_combination:
         s = s.model_copy(update={"ocr_combination": ocr_combination})
     manifest.normalization_mode = s.normalization_mode
+
+    ocr_total = max(print_count, 1)
+    _stage("ocr", total=ocr_total)
     ocr_pages(
         manifest.pages,
         job,
@@ -196,8 +234,18 @@ def run_job(
         print_spec=print_spec,
         log_fn=_log,
     )
-    clean_print_pages(manifest.pages, job, manifest, s, log_fn=_log)
+    if progress is not None and print_count == 0:
+        progress.done = ocr_total
+        _emit_progress()
 
+    if s.clean_print:
+        _stage("clean", total=max(print_count, 1))
+    clean_print_pages(manifest.pages, job, manifest, s, log_fn=_log)
+    if progress is not None and s.clean_print and print_count == 0:
+        progress.done = progress.total or 1
+        _emit_progress()
+
+    _stage("export", total=1)
     export_job(
         job,
         manifest,
@@ -205,6 +253,8 @@ def run_job(
         tei_facsimile=s.tei_facsimile,
         settings=s,
     )
+    if progress is not None and log_fn is not None:
+        progress.finish(log_fn)
     return manifest
 
 

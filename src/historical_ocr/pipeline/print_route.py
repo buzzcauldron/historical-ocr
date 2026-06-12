@@ -261,26 +261,39 @@ def ocr_pages(
     manifest.print_doc_type = spec.name
     manifest.print_ocr_combination = settings.ocr_combination or spec.ocr_combination
 
+    from historical_ocr.lib.resource_policy import resolve_parallel_pages, yield_between_pages
+
     targets = [p for p in pages if p.route == "print"]
-    workers = max(1, int(settings.parallel_pages))
+    workers = resolve_parallel_pages(settings)
+    max_retries = max(0, int(getattr(settings, "max_page_retries", 0)))
 
     def _run_one(page: PageRecord) -> None:
-        ocr_single_page(
-            page,
-            job,
-            settings,
-            print_spec=spec,
-            manifest=manifest,
-            source_pdf=source_pdf,
-            log_fn=log_fn,
-        )
+        for attempt in range(1 + max_retries):
+            if attempt:
+                page.status = "pending"
+                page.errors.clear()
+            ocr_single_page(
+                page,
+                job,
+                settings,
+                print_spec=spec,
+                manifest=manifest,
+                source_pdf=source_pdf,
+                log_fn=log_fn,
+            )
+            if page.status == "ok":
+                break
+            if attempt < max_retries and log_fn:
+                log_fn(f"retry: {page.page_id} (attempt {attempt + 2}/{1 + max_retries})")
 
     if workers == 1 or len(targets) <= 1:
         for page in targets:
             _run_one(page)
+            yield_between_pages(settings)
         return
 
     with ThreadPoolExecutor(max_workers=min(workers, len(targets))) as pool:
         futures = {pool.submit(_run_one, page): page for page in targets}
         for fut in as_completed(futures):
             fut.result()
+            yield_between_pages(settings)

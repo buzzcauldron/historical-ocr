@@ -23,8 +23,15 @@ See [docs/VENDOR.md](docs/VENDOR.md) and [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md).
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e .
+pip install -e .                    # all Python deps (OCR, TrOCR, figures, clean, companions)
+python -m playwright install chromium
 cp .env.example .env   # add API keys for manuscript runs
+```
+
+Or use the full installer (venv + deps + Tesseract + optional sibling overrides):
+
+```bash
+bash scripts/install.sh
 ```
 
 System packages for print OCR (Tesseract + language packs):
@@ -43,12 +50,11 @@ historical-ocr tesseract -v          # verify binary + installed langs
 historical-ocr tesseract --lang lat+frk+eng
 ```
 
-Optional manuscript stack (install separately):
+Manuscript stack (`transcriber-shell`, `strigil`, `playwright`) is included in `pip install -e .`.
+For Kraken HTR or extra transcriber-shell features, use the sibling checkout:
 
 ```bash
-# From sibling checkouts or pip when available
-pip install -e ../transcription-shell[pdf,gemini,kraken]
-playwright install chromium
+pip install -e ../transcription-shell[kraken,gemini,pdf]
 ```
 
 ## Outputs
@@ -114,11 +120,11 @@ historical-ocr export <job_id>
 historical-ocr status <job_id>
 historical-ocr tools       # which external CLIs are on PATH
 historical-ocr tesseract   # Tesseract version + language packs
-historical-ocr bib-ocr paper.pdf   # optional: full citation cascade (pip install -e ../bib-ocr)
+historical-ocr bib-ocr paper.pdf   # bibliography citation cascade (included in pip install -e .)
 historical-ocr ecosystem   # catalog of related GitHub tools
 
 # Page CNN for --mode auto (print vs manuscript routing)
-pip install -e ".[ml]"
+pip install -e .
 historical-ocr cnn sources
 historical-ocr cnn fetch --source ocr-quality --source ocr-pdf-degraded
 historical-ocr cnn train --out models/page_cnn.pt

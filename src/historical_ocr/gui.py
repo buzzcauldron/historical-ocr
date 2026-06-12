@@ -21,6 +21,7 @@ except ImportError:
 
 from historical_ocr.config import Settings
 from historical_ocr.lib.api_detect import detect_provider, provider_label
+from historical_ocr.lib.job_progress import parse_progress_line
 from historical_ocr.lib.quality_presets import QualityTier, apply_quality_tier, tier_label, tier_run_flags
 from historical_ocr.lib.training_loop import correction_template_path, teach_from_job, tune_rule_count
 from historical_ocr.gui_state import load_gui_state, save_gui_state
@@ -33,12 +34,12 @@ def _companion_status() -> list[tuple[str, bool, str]]:
         (
             "transcriber-shell",
             shutil.which("transcriber-shell") is not None,
-            "pip install transcriber-shell",
+            "pip install -e .",
         ),
         (
             "strigil",
             shutil.which("strigil") is not None,
-            "pip install strigil",
+            "pip install -e .",
         ),
     ]
 
@@ -82,10 +83,13 @@ class HistoricalOcrGui:
         self._review_png = tk.BooleanVar(value=True)
         self._review_conf_threshold = tk.StringVar(value="65")
         self._publication_year = tk.StringVar(value="1970")
+        self._background_mode = tk.BooleanVar(value=False)
         self._rules_count = tk.StringVar(value="0 rules learned")
         self._status = tk.StringVar(value="Ready.")
+        self._progress_var = tk.DoubleVar(value=0.0)
         self._last_job_id: str | None = None
         self._last_job_root: Path | None = None
+        self._auto_restart_pending = False
 
         self._build_ui()
         self._load_state()
@@ -174,6 +178,14 @@ class HistoricalOcrGui:
         ttk.Label(review_row, text="threshold").pack(side=tk.LEFT, padx=(8, 2))
         ttk.Entry(review_row, textvariable=self._review_conf_threshold, width=4).pack(side=tk.LEFT)
 
+        bg_row = ttk.Frame(meta_frame)
+        bg_row.pack(fill=tk.X, pady=(4, 0))
+        ttk.Checkbutton(
+            bg_row,
+            text="Background mode (lower CPU priority, throttle between pages)",
+            variable=self._background_mode,
+        ).pack(side=tk.LEFT)
+
         # ── Secondary panels ──────────────────────────────────────────────
         sec = ttk.Frame(outer)
         sec.pack(fill=tk.X, pady=(0, 4))
@@ -193,7 +205,11 @@ class HistoricalOcrGui:
             text = f"✓ {name}" if installed else f"✗ {name}"
             ttk.Label(comp_frame, text=text, foreground=color).pack(anchor=tk.W)
 
-        # ── Status + log ─────────────────────────────────────────────────
+        # ── Progress + status + log ───────────────────────────────────────
+        self._progress_bar = ttk.Progressbar(
+            outer, variable=self._progress_var, maximum=100, mode="determinate",
+        )
+        self._progress_bar.pack(fill=tk.X, pady=(0, 4))
         ttk.Label(outer, textvariable=self._status, foreground=_MUTED).pack(anchor=tk.W)
         log_frame = ttk.LabelFrame(outer, text="Log", padding=4)
         log_frame.pack(fill=tk.BOTH, expand=True)
@@ -216,10 +232,21 @@ class HistoricalOcrGui:
         self._log.see(tk.END)
         self._log.configure(state=tk.DISABLED)
 
+    def _apply_progress(self, line: str) -> bool:
+        if not line.startswith("progress:"):
+            return False
+        parsed = parse_progress_line(line)
+        if parsed:
+            self._progress_var.set(float(parsed["pct"]))
+        self._status.set(line.removeprefix("progress:").strip() or "Running…")
+        return True
+
     def _poll_log(self) -> None:
         try:
             while True:
-                self._append_log(self._log_q.get_nowait())
+                line = self._log_q.get_nowait()
+                if not self._apply_progress(line):
+                    self._append_log(line)
         except queue.Empty:
             pass
         self.root.after(120, self._poll_log)
@@ -329,6 +356,7 @@ class HistoricalOcrGui:
             return
 
         self._run_btn.configure(state=tk.DISABLED)
+        self._progress_var.set(0.0)
         self._status.set("Running…")
         self._worker = threading.Thread(target=self._run_worker, daemon=True)
         self._worker.start()
@@ -338,6 +366,7 @@ class HistoricalOcrGui:
             tier: QualityTier = self._quality.get()  # type: ignore[assignment]
             api_key = self._api_key.get().strip() or None
             year = int(self._publication_year.get()) if self._publication_year.get().strip().isdigit() else None
+            bg = self._background_mode.get()
 
             settings, provider, effective = apply_quality_tier(
                 self._settings,
@@ -355,6 +384,8 @@ class HistoricalOcrGui:
                 update={
                     "symbol_glyph_heatmap": self._review_png.get(),
                     "review_conf_threshold": max(0.0, min(100.0, review_thr)),
+                    "background_mode": bg,
+                    "power_aware": True,
                 },
             )
             manifest = run_job(
@@ -376,8 +407,12 @@ class HistoricalOcrGui:
                 self._log_q.put(f"step 2: edit {corr}")
             self._log_q.put(json.dumps(manifest.export, indent=2))
             ok_pages = sum(1 for p in manifest.pages if p.status == "ok")
-            self._log_q.put(f"\n✓ Done — {ok_pages} page(s) · {effective} tier")
-            self.root.after(0, lambda: self._status.set(f"✓ Done — {ok_pages} page(s), {effective} tier"))
+            err_pages = sum(1 for p in manifest.pages if p.status == "error")
+            summary = f"✓ Done — {ok_pages} page(s) · {effective} tier"
+            if err_pages:
+                summary += f" · {err_pages} error(s)"
+            self._log_q.put(f"\n{summary}")
+            self.root.after(0, lambda: self._status.set(summary))
         except Exception as exc:
             self._log_q.put(f"\n✗ Failed: {exc}")
             self.root.after(0, lambda: self._status.set("✗ Failed — see log"))

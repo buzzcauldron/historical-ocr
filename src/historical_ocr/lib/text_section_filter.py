@@ -168,10 +168,12 @@ def filter_text_regions(
 
     include_ad = getattr(settings, "text_slice_include_ads", False)
     include_figures = getattr(settings, "text_slice_include_figures", False)
-    keep_kinds = {SectionKind.prose, SectionKind.list}
+    # header and other are kept by default — historical newspaper sections often
+    # have irregular line rhythm (classified as "other") or short masthead lines
+    # ("header"). Only clear illustrations are skipped unless opted-in.
+    keep_kinds = {SectionKind.prose, SectionKind.list, SectionKind.header, SectionKind.other}
     if include_ad:
         keep_kinds.add(SectionKind.advertisement)
-        keep_kinds.add(SectionKind.header)
     if include_figures:
         keep_kinds.add(SectionKind.illustration)
 

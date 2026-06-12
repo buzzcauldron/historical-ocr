@@ -184,4 +184,6 @@ def _spot_llm_flags(provider: ProviderName, api_key: str | None, *, tier: Qualit
         "escalate_low_confidence": False,
         "handwriting_gemini_enabled": provider == "gemini",
         "handwriting_gemini_max_regions": 3,
+        "trocr_enabled": True,
+        "trocr_max_lines": 16,
     }
