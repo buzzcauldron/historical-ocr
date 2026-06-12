@@ -22,10 +22,22 @@ def estimate_skew_angle(
     *,
     max_angle: float = 15.0,
     min_abs_angle: float = 0.25,
+    probe_size: int = 900,
 ) -> tuple[float, str]:
-    """Return (angle_degrees, method). Angle is 0.0 if below threshold."""
-    gray = np.asarray(image.convert("L"), dtype=np.uint8)
-    im = Image.fromarray(gray, mode="L")
+    """Return (angle_degrees, method). Angle is 0.0 if below threshold.
+
+    Downscales to probe_size before the rotation loop so large scans
+    don't cause hangs on low-spec hardware.
+    """
+    gray = image.convert("L")
+    # Downscale for the angle-search loop — accuracy is not affected
+    w, h = gray.size
+    scale = min(1.0, probe_size / max(w, h))
+    if scale < 1.0:
+        gray = gray.resize((int(w * scale), int(h * scale)), Image.Resampling.LANCZOS)
+
+    arr_gray = np.asarray(gray, dtype=np.uint8)
+    im = Image.fromarray(arr_gray, mode="L")
     best_angle = 0.0
     best_score = -1.0
     step = 0.5

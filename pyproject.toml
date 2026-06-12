@@ -30,40 +30,40 @@ dependencies = [
   "pypdf>=4.0.0",
   "pdf2image>=1.16.0",
   "scipy>=1.10",
-  # OCR
+  # OCR engine
   "pytesseract>=0.3.10",
-  # ML
+  # GUI
+  "tkinterdnd2>=0.4.0",
+  # LLM providers (Medium / High quality tiers)
+  "anthropic>=0.100",
+  "google-generativeai>=0.7",
+  # URL fetching
+  "playwright>=1.40",
+  # Sibling packages — pulled from GitHub (not on PyPI)
+  "ocr-cleanup @ git+https://github.com/buzzcauldron/ocr-cleanup.git",
+  "bib-ocr @ git+https://github.com/buzzcauldron/bib-ocr.git",
+  "strigil @ git+https://github.com/buzzcauldron/strigil.git",
+  "transcriber-shell @ git+https://github.com/buzzcauldron/transcription-shell.git",
+]
+
+[project.optional-dependencies]
+# ML training and advanced backends — not needed for normal Tesseract OCR.
+# Install with: pip install -e ".[ml]"
+ml = [
   "torch>=2.2",
   "torchvision>=0.17",
   "datasets>=2.18",
   "huggingface_hub>=0.23",
   "pyarrow>=15.0",
-  "transformers>=4.30",
-  "ultralytics>=8.0",
-  "matplotlib>=3.7",
-  # GUI
-  "tkinterdnd2>=0.4.0",
-  # LLM providers
-  "anthropic>=0.100",
-  "google-generativeai>=0.7",
-  # URL fetching
-  "playwright>=1.40",
-    # Sibling packages — pulled from GitHub (not on PyPI)
-  "ocr-cleanup @ git+https://github.com/buzzcauldron/ocr-cleanup.git",
-  "bib-ocr @ git+https://github.com/buzzcauldron/bib-ocr.git",
-  "strigil @ git+https://github.com/buzzcauldron/strigil.git",
-  "transcriber-shell @ git+https://github.com/buzzcauldron/transcription-shell.git",
-  # Note: manuscript-fingerprint (type-case fingerprinting for early-modern era routing)
-  # is an optional CLI tool, not a Python dependency. Install separately if needed:
-  #   pip install -e ../manuscript-fingerprint
+  "transformers>=4.30",   # TrOCR backend
+  "ultralytics>=8.0",     # YOLO figure detection
+  "matplotlib>=3.7",      # training visualisation
 ]
+dev = ["pytest>=8.0", "historical-ocr[ml]"]
 
-[project.optional-dependencies]
-dev = ["pytest>=8.0"]
-ml = ["torch>=2.2", "torchvision>=0.17", "datasets>=2.18", "huggingface_hub>=0.23", "pyarrow>=15.0"]
-pdf = ["pymupdf>=1.24", "numpy>=1.24", "pypdf>=4.0.0", "pdf2image>=1.16.0"]
-figures = ["ultralytics>=8.0"]
-trocr = ["transformers>=4.30"]
+# Note: manuscript-fingerprint (type-case fingerprinting for early-modern era routing)
+# is an optional CLI tool, not a Python dependency:
+#   pip install -e ../manuscript-fingerprint
 
 [project.scripts]
 historical-ocr = "historical_ocr.cli:main"
