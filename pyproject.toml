@@ -48,17 +48,12 @@ dependencies = [
   "google-generativeai>=0.7",
   # URL fetching
   "playwright>=1.40",
+  # Sibling packages — pulled from GitHub (not on PyPI)
+  "ocr-cleanup @ git+https://github.com/buzzcauldron/ocr-cleanup.git",
+  "bib-ocr @ git+https://github.com/buzzcauldron/bib-ocr.git",
+  "strigil @ git+https://github.com/buzzcauldron/strigil.git",
+  "transcriber-shell @ git+https://github.com/buzzcauldron/transcription-shell.git",
 ]
-
-# Sibling packages (not on PyPI — installed by scripts/install.sh from local checkouts):
-#   ocr-cleanup  →  ../ocr-cleanup        (Underwood normalization rules)
-#   strigil      →  ../strigil            (power/hardware API)
-#   bib-ocr      →  ../bib-ocr            (bibliography citation extraction)
-#   transcriber-shell → ../transcription-shell  (manuscript transcription)
-#
-# To install them manually from git:
-#   pip install git+https://github.com/buzzcauldron/transcription-shell.git
-#   pip install -e ../ocr-cleanup  (or strigil, bib-ocr)
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
@@ -66,10 +61,6 @@ ml = ["torch>=2.2", "torchvision>=0.17", "datasets>=2.18", "huggingface_hub>=0.2
 pdf = ["pymupdf>=1.24", "numpy>=1.24", "pypdf>=4.0.0", "pdf2image>=1.16.0"]
 figures = ["ultralytics>=8.0"]
 trocr = ["transformers>=4.30"]
-transcriber = ["transcriber-shell @ git+https://github.com/buzzcauldron/transcription-shell.git"]
-suite = [
-  "historical-ocr[figures,transcriber]",
-]
 
 [project.scripts]
 historical-ocr = "historical_ocr.cli:main"
