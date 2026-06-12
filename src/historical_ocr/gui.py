@@ -321,7 +321,7 @@ class HistoricalOcrGui:
         if not path:
             messagebox.showinfo(
                 “Historical OCR”,
-                f”No export yet for job “{job}”. Run OCR first (step 1).”,
+                f'No export yet for job “{job}”. Run OCR first (step 1).',
             )
             return
         if sys.platform == “darwin”:
