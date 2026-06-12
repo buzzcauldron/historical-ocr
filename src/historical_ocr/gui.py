@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 import webbrowser
 from pathlib import Path
 from tkinter import filedialog, messagebox, scrolledtext, ttk
@@ -388,6 +389,7 @@ class HistoricalOcrGui:
                     "power_aware": True,
                 },
             )
+            t0 = time.perf_counter()
             manifest = run_job(
                 self._job_id.get().strip(),
                 inputs=self._sources or None,
@@ -399,6 +401,7 @@ class HistoricalOcrGui:
                 log_fn=self._log_q.put,
                 **flags,
             )
+            elapsed = time.perf_counter() - t0
             job_id = manifest.job_id
             self._last_job_id = job_id
             self._last_job_root = (settings.jobs_dir / job_id).expanduser().resolve()
@@ -408,7 +411,8 @@ class HistoricalOcrGui:
             self._log_q.put(json.dumps(manifest.export, indent=2))
             ok_pages = sum(1 for p in manifest.pages if p.status == "ok")
             err_pages = sum(1 for p in manifest.pages if p.status == "error")
-            summary = f"✓ Done — {ok_pages} page(s) · {effective} tier"
+            avg = f"{elapsed / ok_pages:.1f}s/page" if ok_pages else f"{elapsed:.1f}s"
+            summary = f"✓ Done — {ok_pages} page(s) · {avg} · {effective} tier"
             if err_pages:
                 summary += f" · {err_pages} error(s)"
             self._log_q.put(f"\n{summary}")
