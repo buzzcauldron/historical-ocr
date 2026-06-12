@@ -81,7 +81,17 @@ def clean_text(
         from ocr_cleanup.providers import get_cleaner
 
         sibling = _sibling_repo()
-        rules_dir = (sibling / "rulesets") if sibling else None
+        if sibling:
+            rules_dir: Path | None = sibling / "rulesets"
+        else:
+            import ocr_cleanup as _oc_pkg
+            _pkg_root = Path(_oc_pkg.__file__).parent
+            for _candidate in (_pkg_root / "rulesets", _pkg_root.parent / "rulesets"):
+                if _candidate.is_dir():
+                    rules_dir = _candidate
+                    break
+            else:
+                rules_dir = None
         rs = RuleSet.load(rules_dir)
 
         cleaner = None
