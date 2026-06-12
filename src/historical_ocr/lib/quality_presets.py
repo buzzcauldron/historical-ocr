@@ -53,8 +53,16 @@ def apply_quality_tier(
             },
         ), "none", effective
 
+    def _figures_available() -> bool:
+        try:
+            import ultralytics  # noqa: F401
+            import huggingface_hub  # noqa: F401
+            return True
+        except ImportError:
+            return False
+
     accuracy_flags = {
-        "figure_extract_enabled": True,
+        "figure_extract_enabled": _figures_available(),
         "damage_retry_enabled": True,
         "deskew_enabled": True,
         "overlaid_ocr_enabled": True,
