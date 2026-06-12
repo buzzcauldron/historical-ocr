@@ -92,30 +92,155 @@ historical-ocr export my-book
 
 ## One-time setup
 
-You only need to do this once per computer.
+You only need to do this once per computer. The steps below assume a **Mac** with macOS 12 or later. Linux instructions follow.
 
-### macOS (simplest)
+---
+
+### macOS — step by step
+
+**Step 1 — Install Homebrew** (the macOS package manager)
+
+Open **Terminal** (search "Terminal" in Spotlight) and paste:
 
 ```bash
-cd "/path/to/historical ocr"
-bash scripts/install.sh
-source .venv/bin/activate
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/homebrew/install/HEAD/install.sh)"
 ```
 
-The install script also tries to install **Tesseract** (the program that reads printed text). If that step fails, run:
+Follow the prompts. When it asks for your password, type it (nothing will appear — that is normal). If Homebrew is already installed, this is harmless. When it finishes, close and reopen Terminal.
+
+**Step 2 — Install Python 3.11 or later**
+
+```bash
+brew install python@3.11
+```
+
+Check it worked:
+
+```bash
+python3 --version
+# should print Python 3.11.x or higher
+```
+
+**Step 3 — Install system Tk** (needed for the drag-and-drop GUI)
+
+Homebrew's Python does not include tkinter by default. Install the matching version:
+
+```bash
+brew install python-tk@3.11
+```
+
+If you installed a different Python version (e.g. 3.12), replace `3.11` with your version number.
+
+**Step 4 — Install Tesseract and Poppler** (the OCR engine and PDF renderer)
 
 ```bash
 brew install tesseract tesseract-lang poppler
 ```
 
-### Check that the basics work
+This installs Tesseract with language packs for English, Latin, German, French, Italian, Spanish, and Fraktur (old German type).
+
+**Step 5 — Download and set up the tool**
+
+If you have not already cloned the repository:
+
+```bash
+cd ~/Projects   # or wherever you keep code
+git clone https://github.com/buzzcauldron/historical-ocr.git "historical ocr"
+cd "historical ocr"
+```
+
+If you already have the folder, just navigate to it:
+
+```bash
+cd "/path/to/historical ocr"
+```
+
+Now run the installer:
+
+```bash
+bash scripts/install.sh
+```
+
+This creates a Python virtual environment (`.venv`), installs all Python dependencies, and installs Playwright's Chromium browser.
+
+**Step 6 — Activate the environment**
+
+```bash
+source .venv/bin/activate
+```
+
+You need to run this command each time you open a new Terminal window before using the tool. Add it to your shell profile (`~/.zshrc`) to make it automatic:
+
+```bash
+echo 'source "/path/to/historical ocr/.venv/bin/activate"' >> ~/.zshrc
+```
+
+**Step 7 — Add API keys** (optional — needed for AI cleanup)
+
+```bash
+cp .env.example .env
+open .env   # opens in TextEdit
+```
+
+Add your key(s). You only need one:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...   # for Medium / High tier (Claude Haiku / Sonnet)
+GOOGLE_API_KEY=AIza...         # alternative for High tier (Gemini 2.5 Pro)
+```
+
+Free tier (Tesseract + rule-based cleanup) works without any API key.
+
+**Step 8 — Launch**
+
+```bash
+historical-ocr-gui
+```
+
+The GUI window will open. If you see an error about tkinter, make sure step 3 used the correct Python version number.
+
+---
+
+### Verify the install
 
 ```bash
 historical-ocr --version
 historical-ocr tools
 ```
 
-You want a **✓** next to **tesseract** for printed books.
+You want a **✓** next to **tesseract**. A ✓ next to **playwright** is needed only for URL fetching.
+
+---
+
+### Linux (Debian / Ubuntu)
+
+```bash
+sudo apt update
+sudo apt install -y \
+  python3.11 python3.11-venv python3-tk \
+  tesseract-ocr poppler-utils \
+  tesseract-ocr-eng tesseract-ocr-lat tesseract-ocr-deu \
+  tesseract-ocr-fra tesseract-ocr-ita tesseract-ocr-spa \
+  tesseract-ocr-script-fraktur
+
+cd "/path/to/historical ocr"
+bash scripts/install.sh
+source .venv/bin/activate
+```
+
+---
+
+### Troubleshooting
+
+**"No module named tkinter"** — Run `brew install python-tk@<your-python-version>` (macOS) or `sudo apt install python3-tk` (Linux).
+
+**"tesseract: command not found"** — Run `brew install tesseract tesseract-lang poppler` (macOS) or the `apt install` line above (Linux).
+
+**"pdftoppm: command not found" / PDF pages blank** — Poppler is not installed. Run `brew install poppler` (macOS) or `sudo apt install poppler-utils` (Linux).
+
+**GUI window is blank or does not open** — Make sure you activated the venv (`source .venv/bin/activate`) before running `historical-ocr-gui`.
+
+**"Nothing fetched from URL"** — Playwright's Chromium may not be installed. Run `python -m playwright install chromium`.
 
 ---
 
