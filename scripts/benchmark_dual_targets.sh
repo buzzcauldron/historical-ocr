@@ -21,7 +21,7 @@ BLACKNEWS_TIF="${BLACKNEWS_TIF:-$HOME/Downloads/BlackNews_19700110_002.tif}"
 BENCH_DIR="${BENCH_DIR:-data/benchmarks}"
 
 if [[ ! -x "$HOCR" ]]; then
-  echo "error: run pip install -e '.[ml]' first" >&2
+  echo "error: run pip install -e . first" >&2
   exit 1
 fi
 

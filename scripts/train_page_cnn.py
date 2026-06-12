@@ -36,7 +36,7 @@ def main() -> int:
     args = ap.parse_args()
 
     if not torch_available():
-        print("error: PyTorch not installed — pip install -e '.[ml]'", file=sys.stderr)
+        print("error: PyTorch not installed — pip install -e .", file=sys.stderr)
         return 1
 
     data = args.data.expanduser().resolve()

@@ -42,6 +42,7 @@ def apply_fast_presets(settings: Settings) -> Settings:
             "symbol_glyph_heatmap": False,
             "figure_extract_enabled": False,
             "damage_retry_enabled": False,
+            "trocr_enabled": False,
             "deskew_enabled": False,
         },
     )

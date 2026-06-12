@@ -27,7 +27,7 @@ def classify_page(
 
 def describe(model_path: Path | None) -> str:
     if not torch_available():
-        return "PyTorch not installed (pip install -e '.[ml]')"
+        return "PyTorch not installed (pip install -e .)"
     if model_path is None or not model_path.is_file():
         return f"no model at {model_path or '(unset)'}"
     summary = checkpoint_summary(model_path)

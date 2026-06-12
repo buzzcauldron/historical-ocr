@@ -126,6 +126,6 @@ def clean_text(
         return proc.stdout
 
     raise RuntimeError(
-        "ocr-cleanup not available. Clone ../ocr-cleanup and pip install -e . "
-        "or install from tedunderwood/DataMunging (OCRnormalizer + rulesets)."
+        "ocr-cleanup not available — pip install -e . "
+        "(or clone ../ocr-cleanup for a local fork)."
     )

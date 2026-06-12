@@ -132,7 +132,7 @@ def iter_chronam_rows(
         import pyarrow.parquet as pq
     except ImportError as exc:
         raise RuntimeError(
-            "pip install -e '.[ml]' (needs huggingface_hub + pyarrow)",
+            "pip install -e . (needs huggingface_hub + pyarrow)",
         ) from exc
 
     for shard in shards or CHRONAM_SHARDS:

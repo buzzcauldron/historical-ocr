@@ -26,6 +26,7 @@ class PageProcessCounts:
     ocr_lines: int = 0
     mean_conf: float | None = None
     damage_retries: int = 0
+    trocr_repairs: int = 0
     damage_llm_repairs: int = 0
     handwriting_gemini: int = 0
     handwriting_extent: str = "none"
@@ -59,6 +60,8 @@ class PageProcessCounts:
             )
         if self.damage_retries:
             parts.append(f"dmg-retry={self.damage_retries}")
+        if self.trocr_repairs:
+            parts.append(f"trocr={self.trocr_repairs}")
         if self.damage_llm_repairs:
             parts.append(f"dmg-llm={self.damage_llm_repairs}")
         if self.handwriting_gemini:
@@ -129,6 +132,14 @@ def postprocess_layout(
         layout = retry_weak_lines(layout, image, lang=lang, settings=settings, log_fn=log_fn)
         weak_after = sum(1 for ln in layout.lines if ln.conf < settings.damage_retry_conf_threshold)
         counts.damage_retries = max(0, weak_before - weak_after)
+
+    if getattr(settings, "trocr_enabled", False) and layout.lines:
+        from historical_ocr.lib.trocr_retry import retry_weak_lines_with_trocr
+
+        weak_before = sum(1 for ln in layout.lines if ln.conf < settings.trocr_conf_threshold)
+        layout = retry_weak_lines_with_trocr(layout, image, settings=settings, log_fn=log_fn)
+        weak_after = sum(1 for ln in layout.lines if ln.conf < settings.trocr_conf_threshold)
+        counts.trocr_repairs = max(0, weak_before - weak_after)
 
     if settings.damage_llm_enabled and layout.lines:
         from historical_ocr.lib.damage_llm import repair_weak_lines_with_llm

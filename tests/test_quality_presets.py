@@ -60,6 +60,8 @@ def test_high_uses_spot_llm_with_key() -> None:
     assert s.clean_llm is None
     assert s.damage_llm_enabled is True
     assert s.escalate_low_confidence is False
+    assert s.trocr_enabled is True
+    assert s.trocr_max_lines == 16
     assert s.google_api_key == "AIzaSy_test_key_12345"
 
 

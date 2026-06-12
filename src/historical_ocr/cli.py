@@ -14,6 +14,7 @@ from historical_ocr.backends import ocr_cleanup as underwood_backend
 from historical_ocr.backends import tesseract as tess_backend
 from historical_ocr.pipeline.acquire import acquire_from_url, ingest_local
 from historical_ocr.pipeline.export import export_job
+from historical_ocr.lib.job_progress import cli_progress_sink
 from historical_ocr.pipeline.run_job import load_manifest, run_job
 
 
@@ -25,32 +26,37 @@ def _job_paths(settings: Settings, job_id: str):
 
 def cmd_run(args: argparse.Namespace) -> int:
     inputs = [Path(p) for p in (args.input or [])]
-    manifest = run_job(
-        args.job_id,
-        url=args.url,
-        limit=args.limit,
-        inputs=inputs or None,
-        quality=args.quality,
-        clean=args.clean,
-        print_doc_type=args.print_doc_type,
-        ocr_combination=args.ocr_combination,
-        publication_year=args.publication_year,
-        print_language=args.print_language,
-        fast=args.fast,
-        rules_only=args.rules_only,
-        low_latency=args.low_latency,
-        symbol_filter=args.symbol_filter,
-        glyph_heatmap=args.glyph_heatmap,
-        review_conf_threshold=args.review_conf_threshold,
-        fingerprint=args.fingerprint,
-        extract_figures=args.extract_figures,
-        deskew=args.deskew,
-        overlaid_ocr=args.overlaid_ocr,
-        text_slice_only=args.text_slice_only,
-        text_slice_include_ads=args.include_ads,
-        text_slice_include_figures=args.include_figures,
-        log_fn=lambda m: print(m, file=sys.stderr, flush=True),
-    )
+    log_sink = cli_progress_sink()
+    try:
+        manifest = run_job(
+            args.job_id,
+            url=args.url,
+            limit=args.limit,
+            inputs=inputs or None,
+            quality=args.quality,
+            clean=args.clean,
+            print_doc_type=args.print_doc_type,
+            ocr_combination=args.ocr_combination,
+            publication_year=args.publication_year,
+            print_language=args.print_language,
+            fast=args.fast,
+            rules_only=args.rules_only,
+            low_latency=args.low_latency,
+            symbol_filter=args.symbol_filter,
+            glyph_heatmap=args.glyph_heatmap,
+            review_conf_threshold=args.review_conf_threshold,
+            fingerprint=args.fingerprint,
+            extract_figures=args.extract_figures,
+            deskew=args.deskew,
+            overlaid_ocr=args.overlaid_ocr,
+            text_slice_only=args.text_slice_only,
+            text_slice_include_ads=args.include_ads,
+            text_slice_include_figures=args.include_figures,
+            trocr=args.trocr,
+            log_fn=log_sink,
+        )
+    finally:
+        log_sink.finalize()
     print(json.dumps(manifest.export, indent=2))
     return 0
 
@@ -92,9 +98,12 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_tools(_args: argparse.Namespace) -> int:
+    from historical_ocr.backends import trocr as trocr_backend
+
     settings = Settings()
     tools = {
         "tesseract (print OCR)": tess_backend.available(),
+        "TrOCR (weak-line retry)": trocr_backend.available(),
         "bib-ocr (PDF bibliography cascade)": bib_backend.available(),
         "ocr-cleanup / Underwood rules (print clean)": underwood_backend.available(),
     }
@@ -105,6 +114,7 @@ def cmd_tools(_args: argparse.Namespace) -> int:
         missing = tess_backend.historical_langs_missing()
         if missing:
             print(f"  → recommended packs not installed: {', '.join(missing)}")
+    print(f"  → {trocr_backend.describe(model=settings.trocr_model)}")
     print(f"  → {bib_backend.describe()}")
     return 0
 
@@ -116,7 +126,7 @@ def cmd_bib_ocr(args: argparse.Namespace) -> int:
         return 1
     if not bib_backend.available():
         print(f"error: {bib_backend.describe()}", file=sys.stderr)
-        print("  pip install -e ../bib-ocr", file=sys.stderr)
+        print("  pip install -e .", file=sys.stderr)
         return 1
     result = bib_backend.extract_citations(
         pdf,
@@ -169,7 +179,7 @@ def cmd_cnn_train(args: argparse.Namespace) -> int:
     from historical_ocr.ml.page_cnn import torch_available, train_page_cnn
 
     if not torch_available():
-        print("error: PyTorch not installed — pip install -e '.[ml]'", file=sys.stderr)
+        print("error: PyTorch not installed — pip install -e .", file=sys.stderr)
         return 1
     data = Path(args.data).expanduser().resolve()
     out = Path(args.out).expanduser().resolve()
@@ -782,6 +792,12 @@ def build_parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         default=None,
         help="OCR ink-zone overlays from heatmap columns/sections (default on for medium/high)",
+    )
+    run.add_argument(
+        "--trocr",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Re-OCR weak lines with TrOCR after Tesseract (default on for high quality)",
     )
     run.set_defaults(func=cmd_run)
 

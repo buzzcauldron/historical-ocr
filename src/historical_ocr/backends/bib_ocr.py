@@ -23,7 +23,7 @@ def available() -> bool:
 def describe() -> str:
     if available():
         return "bib-ocr citation cascade (doi_scan → ref_section OCR → footnotes → inline)"
-    return "not installed — pip install -e ../bib-ocr"
+    return "not installed — pip install -e ."
 
 
 def extract_citations(
@@ -35,7 +35,7 @@ def extract_citations(
     if not available():
         raise RuntimeError(
             "bib-ocr not installed. From a sibling checkout:\n"
-            "  pip install -e ../bib-ocr",
+            "  pip install -e .",
         )
     return _extract_fn(  # type: ignore[misc]
         pdf_path,

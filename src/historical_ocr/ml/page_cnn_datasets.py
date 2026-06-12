@@ -116,7 +116,7 @@ def fetch_huggingface_source(
     try:
         from datasets import load_dataset
     except ImportError as exc:
-        raise RuntimeError("pip install -e '.[ml]' (needs datasets + huggingface_hub)") from exc
+        raise RuntimeError("pip install -e . (needs datasets + huggingface_hub)") from exc
 
     label: MaterialLabel = raw["label"]
     cap = limit if limit is not None else int(raw.get("default_limit", 100))

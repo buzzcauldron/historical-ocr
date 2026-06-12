@@ -30,7 +30,7 @@ def page_density(pdf_path: str | Path, bands: int = 10):
         import fitz
         import numpy as np
     except ImportError as exc:
-        raise ImportError("page_density requires pymupdf and numpy: pip install -e '.[pdf]'") from exc
+        raise ImportError("page_density requires pymupdf and numpy: pip install -e .") from exc
 
     pdf_path = Path(pdf_path)
     doc = fitz.open(str(pdf_path))

@@ -27,7 +27,7 @@ def extract_pdf_pages(
         import fitz
     except ImportError as e:
         raise RuntimeError(
-            "PDF support requires pymupdf: pip install 'historical-ocr[pdf]'"
+            "PDF support requires pymupdf: pip install -e ."
         ) from e
 
     pdf_path = Path(pdf_path).expanduser().resolve()

@@ -35,7 +35,7 @@ def _resolve_weights(model_path_or_repo: str) -> str:
     except ImportError as e:
         raise RuntimeError(
             "huggingface_hub required for figure-model downloads. "
-            "Install with: pip install 'historical-ocr[figures]'"
+            "Install with: pip install -e ."
         ) from e
 
     filename = os.environ.get("HISTORICAL_OCR_FIGURE_MODEL_FILENAME") or DEFAULT_MODEL_FILENAME
@@ -56,7 +56,7 @@ def detect_figures(
     except ImportError as e:
         raise RuntimeError(
             "Ultralytics YOLO is required for figure detection. "
-            "Install with: pip install 'historical-ocr[figures]'"
+            "Install with: pip install -e ."
         ) from e
     try:
         from PIL import Image

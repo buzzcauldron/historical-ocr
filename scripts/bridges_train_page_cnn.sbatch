@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:v100-32:1
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=5
-#SBATCH -t 02:00:00
+#SBATCH -t 04:00:00
 #SBATCH -A hum260002p
 #SBATCH -o %x-%j.out
 set -euo pipefail
