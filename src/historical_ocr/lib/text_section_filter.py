@@ -148,7 +148,7 @@ def classify_ink_section(crop_gray: Any, *, page_height: int) -> SectionKind:
     if has_rhythm and avg_run_frac < 0.60 and len(bands) >= 3:
         return SectionKind.list
 
-    if not has_rhythm and (wide_row_frac >= 0.65 or blob_frac >= 0.30):
+    if not has_rhythm and blob_frac >= 0.28 and wide_row_frac >= _ILLUSTRATION_WIDE_ROW_FRAC:
         return SectionKind.illustration
 
     if not has_rhythm and blob_frac >= 0.08 and avg_run_frac < 0.40:
@@ -166,14 +166,18 @@ def filter_text_regions(
     if not getattr(settings, "text_slice_only", False):
         return regions, []
 
-    include_ad = getattr(settings, "text_slice_include_ads", False)
     include_figures = getattr(settings, "text_slice_include_figures", False)
-    # header and other are kept by default — historical newspaper sections often
-    # have irregular line rhythm (classified as "other") or short masthead lines
-    # ("header"). Only clear illustrations are skipped unless opted-in.
-    keep_kinds = {SectionKind.prose, SectionKind.list, SectionKind.header, SectionKind.other}
-    if include_ad:
-        keep_kinds.add(SectionKind.advertisement)
+    # Keep everything except clear illustrations (photos) — the advertisement
+    # and handwriting classifiers are unreliable for historical newspaper content
+    # and false-negatives (dropping real text) are worse than false-positives.
+    keep_kinds = {
+        SectionKind.prose,
+        SectionKind.list,
+        SectionKind.header,
+        SectionKind.other,
+        SectionKind.advertisement,
+        SectionKind.handwriting,
+    }
     if include_figures:
         keep_kinds.add(SectionKind.illustration)
 
