@@ -72,14 +72,6 @@ if [[ -d "$PROJECTS/ocr-cleanup" ]]; then
   pip install -e "$PROJECTS/ocr-cleanup"
 fi
 
-if [[ -d "$PROJECTS/manuscript-fingerprint" ]]; then
-  echo "→ editable override: manuscript-fingerprint"
-  pip install -e "$PROJECTS/manuscript-fingerprint"
-elif [[ -d "$PROJECTS/typebox-fingerprinter" ]]; then
-  echo "→ editable override: typebox-fingerprinter"
-  pip install -e "$PROJECTS/typebox-fingerprinter"
-fi
-
 if [[ -d "$PROJECTS/bib-ocr" ]]; then
   echo "→ editable override: bib-ocr"
   pip install -e "$PROJECTS/bib-ocr"

@@ -1,8 +1,7 @@
-"""Invoke manuscript-fingerprint CLI when installed on PATH."""
+"""Invoke manuscript-fingerprint CLI when installed on PATH (optional enhancement)."""
 
 from __future__ import annotations
 
-import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -27,22 +26,16 @@ def scan_pdf(
 ) -> Path:
     if not available():
         raise RuntimeError(
-            "manuscript-fingerprint not on PATH. Install from manuscript-fingerprint."
+            "manuscript-fingerprint not on PATH — type-case fingerprinting is optional. "
+            "The pipeline runs without it; install manuscript-fingerprint for era-based "
+            "doc-type routing on early-modern sources."
         )
-
     out_dir.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        _cli_name(),
-        "scan",
-        str(pdf_path),
-        "--out",
-        str(out_dir),
-        "--dpi",
-        str(dpi),
-        "--seg-dpi",
-        str(seg_dpi),
-    ]
-    subprocess.run(cmd, check=True)
+    subprocess.run(
+        [_cli_name(), "scan", str(pdf_path), "--out", str(out_dir),
+         "--dpi", str(dpi), "--seg-dpi", str(seg_dpi)],
+        check=True,
+    )
     return out_dir
 
 
@@ -62,13 +55,8 @@ def load_summary(scan_job: Path):
 
 
 def deskew_scan_pages(scan_job: Path, *, in_place: bool = True) -> int:
-    """Deskew rasterized pages under scan_job/01_pages (typebox-fingerprinter layout)."""
-    try:
-        from manuscript_fingerprint.deskew import deskew_job_pages
-    except ImportError as exc:
-        raise RuntimeError(
-            "deskew requires typebox-fingerprinter: pip install -e ../manuscript-fingerprint",
-        ) from exc
+    """Deskew rasterized pages under scan_job/01_pages."""
+    from historical_ocr.image_tools.deskew import deskew_job_pages
 
     rows = deskew_job_pages(scan_job, in_place=in_place)
     return sum(1 for _path, meta in rows if meta.applied)
