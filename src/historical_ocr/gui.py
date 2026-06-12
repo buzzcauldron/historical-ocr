@@ -305,29 +305,29 @@ class HistoricalOcrGui:
 
     def _open_job(self) -> None:
         if self._last_job_root and self._last_job_root.is_dir():
-            target = self._last_job_root / “export”
-            if sys.platform == “darwin”:
-                subprocess.run([“open”, str(target)], check=False)
-            elif sys.platform.startswith(“linux”):
-                subprocess.run([“xdg-open”, str(target)], check=False)
+            target = self._last_job_root / "export"
+            if sys.platform == "darwin":
+                subprocess.run(["open", str(target)], check=False)
+            elif sys.platform.startswith("linux"):
+                subprocess.run(["xdg-open", str(target)], check=False)
             else:
                 webbrowser.open(target.as_uri())
         else:
-            messagebox.showinfo(“Historical OCR”, “Run a job first.”)
+            messagebox.showinfo("Historical OCR", "Run a job first.")
 
     def _open_corrected(self) -> None:
         job = self._last_job_id or self._job_id.get().strip()
         path = correction_template_path(job, self._settings)
         if not path:
             messagebox.showinfo(
-                “Historical OCR”,
-                f'No export yet for job “{job}”. Run OCR first (step 1).',
+                "Historical OCR",
+                f'No export yet for job "{job}". Run OCR first (step 1).',
             )
             return
-        if sys.platform == “darwin”:
-            subprocess.run([“open”, “-t”, str(path)], check=False)
-        elif sys.platform.startswith(“linux”):
-            subprocess.run([“xdg-open”, str(path)], check=False)
+        if sys.platform == "darwin":
+            subprocess.run(["open", "-t", str(path)], check=False)
+        elif sys.platform.startswith("linux"):
+            subprocess.run(["xdg-open", str(path)], check=False)
         else:
             webbrowser.open(path.as_uri())
 
