@@ -53,3 +53,13 @@ cp "$OUT" "$TESSDATA_DIR/$(basename "$OUT")"
 export TESSDATA_PREFIX="$TESSDATA_DIR"
 tesseract --list-langs 2>/dev/null | head -20 || true
 echo "[train] saved $OUT tessdata_prefix=$TESSDATA_DIR"
+
+# Run post-training CER eval on held-out newspaper_gt val split.
+echo "[eval] evaluating on newspaper_gt val split"
+STAMP=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+historical-ocr gt eval \
+  --gt-dir "$ROOT/data/newspaper_gt" \
+  --split val \
+  --preset medium \
+  --out "$ROOT/data/newspaper_gt/eval/tess_post_train_${STAMP}" \
+  || echo "[eval] WARNING: gt eval failed (non-fatal)"
