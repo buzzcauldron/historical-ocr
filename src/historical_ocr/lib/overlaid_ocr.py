@@ -113,6 +113,85 @@ def _separate_banner_regions(
     return [banner], col_regions
 
 
+def _find_midpage_banners(
+    regions: list[RegionBox],
+    page_width: int,
+    page_height: int,
+    *,
+    max_height_frac: float = 0.08,
+    max_y_spread_px: int = 40,
+    min_span_frac: float = 0.70,
+    min_cols: int = 2,
+    min_sliver_px: int = 15,
+) -> tuple[list[RegionBox], list[RegionBox]]:
+    """Merge mid-page short sections that together span most of the page width.
+
+    Newspaper section headers (e.g. "VOL. I, NO. I    NEWARK, N.J.    1968") often
+    appear as a row of short bands one per column.  This groups short sections from
+    different columns whose y-ranges overlap, merges qualifying clusters into a
+    single wide crop, and returns (banner_regions, remaining_regions).
+    """
+    max_h = int(page_height * max_height_frac)
+
+    short = [r for r in regions if r.height <= max_h]
+    rest = [r for r in regions if r.height > max_h]
+
+    if not short:
+        return [], regions
+
+    # Cluster short sections by y-overlap using a greedy sweep.
+    clusters: list[list[RegionBox]] = []
+    for r in sorted(short, key=lambda s: s.top):
+        placed = False
+        for cluster in clusters:
+            ctop = min(s.top for s in cluster)
+            cbot = max(s.top + s.height for s in cluster)
+            if r.top < cbot and r.top + r.height > ctop:   # y overlap
+                # Only extend if the total y spread stays tight.
+                new_top = min(ctop, r.top)
+                new_bot = max(cbot, r.top + r.height)
+                if new_bot - new_top <= max_h + max_y_spread_px:
+                    cluster.append(r)
+                    placed = True
+                    break
+        if not placed:
+            clusters.append([r])
+
+    banner_regions: list[RegionBox] = []
+    merged_ids: set[int] = set()
+
+    for cluster in clusters:
+        cols = {r.sort_col for r in cluster}
+        if len(cols) < min_cols:
+            continue
+        x_min = min(r.left for r in cluster)
+        x_max = max(r.left + r.width for r in cluster)
+        if x_max - x_min < page_width * min_span_frac:
+            continue
+
+        y_top = min(r.top for r in cluster)
+        y_bot = max(r.top + r.height for r in cluster)
+        pad = max(r.pad for r in cluster)
+
+        banner_regions.append(RegionBox(
+            left=x_min,
+            top=y_top,
+            width=x_max - x_min,
+            height=y_bot - y_top,
+            sort_col=-1,
+            sort_band=y_top,
+            pad=pad,
+        ))
+        merged_ids.update(id(r) for r in cluster)
+
+    remaining: list[RegionBox] = list(rest)
+    for r in short:
+        if id(r) not in merged_ids:
+            remaining.append(r)
+
+    return banner_regions, remaining
+
+
 def _narrowest_column_width(layout: InkLayout) -> int:
     widths = [col.width for col in layout.columns]
     return min(widths) if widths else 0
@@ -314,6 +393,12 @@ def ocr_image_overlaid(
             ink_layout.page_height,
             n_cols=len(ink_layout.columns),
         )
+        mid_banners, regions = _find_midpage_banners(
+            regions,
+            ink_layout.page_width,
+            ink_layout.page_height,
+        )
+        banner_regions += mid_banners
         if banner_regions:
             _log(
                 f"banner-ocr: {len(banner_regions)} full-width zone(s) "
