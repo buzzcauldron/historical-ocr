@@ -181,8 +181,22 @@ def run_tesseract_backend(
             if column_result is not None:
                 return _finish(column_result)
 
-        # Fallback column detection — always try before full-page OCR so that
-        # multi-column pages don't get merged into single lines by PSM 6.
+        # Fallback column detection — only when psm=6 (uniform text block).
+        # PSM 3 (auto page segmentation) already handles multi-column layouts
+        # natively, so the fallback would just override a better Tesseract result.
+        if psm != 6:
+            if log_fn:
+                log_fn(f"ocr-route: full-page (psm={psm})")
+            return _finish(
+                ocr_fn(
+                    path,
+                    lang=lang,
+                    psm=psm,
+                    settings=settings,
+                    filter_opts=filter_opts,
+                ),
+            )
+
         from historical_ocr.lib.column_ocr import ocr_image_by_columns
 
         detected_columns = ocr_image_by_columns(
