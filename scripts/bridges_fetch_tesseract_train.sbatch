@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:v100-32:1
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=5
-#SBATCH -t 12:00:00
+#SBATCH -t 24:00:00
 #SBATCH -A hum260002p
 #SBATCH -o %x-%j.out
 # Fetch HF newspaper OCR corpora + prepare tesstrain line GT on Bridges2.
@@ -55,6 +55,20 @@ if [[ -n "${TESS_TRAIN_SOURCES:-}" ]]; then
     SOURCE_ARGS+=(--source "$sid")
   done
 fi
+
+# Default sources when TESS_TRAIN_SOURCES is unset: all four newspaper corpora.
+# chronicling-america + newspaper-ocr-gold cover 19th-c; 1920s extends to mid-20th-c.
+if [[ -z "${TESS_TRAIN_SOURCES:-}" ]]; then
+  SOURCE_ARGS=(
+    --source chronicling-america
+    --source newspaper-ocr-gold
+    --source chronicling-america-1920s
+    --source ocr-quality
+  )
+fi
+
+# Always include local newspaper_gt (train split only — val is held out for gt eval).
+LOCAL_ARGS+=(--local newspaper_gt)
 
 historical-ocr tess fetch \
   --out "$DATA" \

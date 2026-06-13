@@ -318,6 +318,7 @@ def import_local_page_corpus(
     out_root: Path,
     *,
     limit: int | None = None,
+    split: str = "train",
     log_fn: Callable[[str], None] | None = None,
 ) -> int:
     from historical_ocr.ml.newspaper_gt import load_manifest
@@ -331,6 +332,8 @@ def import_local_page_corpus(
     for rid, rec in sorted((manifest.get("records") or {}).items()):
         if n >= cap:
             break
+        if rec.get("split", "train") != split:
+            continue
         img = corpus_path / str(rec["image"])
         text_rel = str(rec.get("text") or "")
         txt = corpus_path / str(text_rel)
