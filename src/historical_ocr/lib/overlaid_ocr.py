@@ -28,6 +28,91 @@ def _use_section_bands_for_columns(layout: InkLayout) -> bool:
     return len(layout.sections) > n_cols * 2
 
 
+def _separate_banner_regions(
+    regions: list[RegionBox],
+    page_width: int,
+    page_height: int,
+    n_cols: int,
+    *,
+    max_top_align_px: int = 60,
+    min_span_frac: float = 0.70,
+    min_sliver_px: int = 20,
+) -> tuple[list[RegionBox], list[RegionBox]]:
+    """Split full-width banner zones from column-local sections.
+
+    When the topmost section in each column starts at nearly the same y-position
+    and together they span most of the page width, the overlap band is likely a
+    multi-column headline or masthead.  Replace those individual column strips
+    with a single full-width crop so Tesseract sees the complete text rather than
+    a truncated fragment in each column.
+
+    Returns (banner_regions, remaining_column_regions).
+    """
+    if n_cols < 2 or not regions:
+        return [], regions
+
+    by_col: dict[int, list[RegionBox]] = {}
+    for r in regions:
+        by_col.setdefault(r.sort_col, []).append(r)
+
+    if len(by_col) < max(2, n_cols - 1):
+        return [], regions
+
+    top_per_col: dict[int, RegionBox] = {
+        col: min(secs, key=lambda r: r.top) for col, secs in by_col.items()
+    }
+    top_secs = list(top_per_col.values())
+
+    tops = [s.top for s in top_secs]
+    if max(tops) - min(tops) > max_top_align_px:
+        return [], regions
+
+    x_min = min(s.left for s in top_secs)
+    x_max = max(s.left + s.width for s in top_secs)
+    if x_max - x_min < page_width * min_span_frac:
+        return [], regions
+
+    # Banner zone: from the common top to the earliest section bottom.
+    banner_top = min(tops)
+    banner_bot = min(s.top + s.height for s in top_secs)
+    if banner_bot <= banner_top:
+        return [], regions
+
+    pad = regions[0].pad if regions else 4
+    banner = RegionBox(
+        left=x_min,
+        top=banner_top,
+        width=x_max - x_min,
+        height=banner_bot - banner_top,
+        sort_col=-1,
+        sort_band=banner_top,
+        pad=pad,
+    )
+
+    top_ids = {id(r) for r in top_secs}
+    col_regions: list[RegionBox] = []
+    for r in regions:
+        if id(r) in top_ids:
+            new_top = banner_bot
+            remaining_h = (r.top + r.height) - new_top
+            if remaining_h > min_sliver_px:
+                col_regions.append(RegionBox(
+                    left=r.left,
+                    top=new_top,
+                    width=r.width,
+                    height=remaining_h,
+                    sort_col=r.sort_col,
+                    sort_subcol=r.sort_subcol,
+                    sort_band=new_top,
+                    section_id=r.section_id,
+                    pad=r.pad,
+                ))
+        else:
+            col_regions.append(r)
+
+    return [banner], col_regions
+
+
 def _narrowest_column_width(layout: InkLayout) -> int:
     widths = [col.width for col in layout.columns]
     return min(widths) if widths else 0
@@ -217,6 +302,24 @@ def ocr_image_overlaid(
     )
     regions = expand_wide_regions(image, regions, ink_layout)
 
+    # When using section bands on a multi-column layout, detect full-width
+    # banner zones (mastheads, spanning headlines).  These are OCR'd as a
+    # single wide crop so Tesseract sees the complete text instead of a
+    # truncated fragment in each column.
+    banner_regions: list[RegionBox] = []
+    if using_section_bands and len(ink_layout.columns) >= 2:
+        banner_regions, regions = _separate_banner_regions(
+            regions,
+            ink_layout.page_width,
+            ink_layout.page_height,
+            n_cols=len(ink_layout.columns),
+        )
+        if banner_regions:
+            _log(
+                f"banner-ocr: {len(banner_regions)} full-width zone(s) "
+                f"separated from column bands",
+            )
+
     # Only apply text-slice filtering on section bands, not full-height column
     # crops — filtering a full column would drop it entirely and fall back to
     # full-page OCR which merges lines across columns.
@@ -229,7 +332,8 @@ def ocr_image_overlaid(
             )
         regions = kept
 
-    if len(regions) < 2:
+    all_regions = banner_regions + regions
+    if len(all_regions) < 2:
         return None
 
     if len(ink_layout.columns) >= 2 and not _use_section_bands_for_columns(ink_layout):
@@ -237,14 +341,14 @@ def ocr_image_overlaid(
     else:
         kind = "section"
     _log(
-        f"overlaid-ocr: {len(regions)} {kind} zone(s), "
+        f"overlaid-ocr: {len(all_regions)} {kind} zone(s), "
         f"{len(ink_layout.columns)} column(s) on {image.name}",
     )
 
     sections = _tei_sections_from_layout(ink_layout) if use_sections else ()
     result = ocr_image_regions(
         image,
-        regions,
+        all_regions,
         lang=lang,
         psm=psm,
         settings=settings,
