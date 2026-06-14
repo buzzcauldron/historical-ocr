@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH -J np-eval
-#SBATCH -p RM-shared
+#SBATCH -p GPU-shared
+#SBATCH --gres=gpu:v100-32:1
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=5
 #SBATCH -t 01:00:00
