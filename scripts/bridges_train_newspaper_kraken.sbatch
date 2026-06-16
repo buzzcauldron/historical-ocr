@@ -52,7 +52,7 @@ echo "[kraken] training on $N_TRAIN lines, eval on $N_EVAL lines"
 # Train Kraken model.
 # Use -t manifest file to avoid "Argument list too long" with 300k+ line paths.
 ketos \
-  --device cuda \
+  -d cuda:0 \
   --workers 4 \
   train \
   --output "$OUT" \
@@ -60,6 +60,7 @@ ketos \
   --batch-size "$BATCH" \
   --quit early \
   --lag "$LAG" \
+  -f path \
   -e "$KRAKEN_GT/eval.txt" \
   -t "$KRAKEN_GT/train.txt"
 
