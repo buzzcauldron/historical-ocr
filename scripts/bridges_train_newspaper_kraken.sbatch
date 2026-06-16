@@ -50,6 +50,7 @@ N_EVAL=$(wc -l < "$KRAKEN_GT/eval.txt")
 echo "[kraken] training on $N_TRAIN lines, eval on $N_EVAL lines"
 
 # Train Kraken model.
+# Use -t manifest file to avoid "Argument list too long" with 300k+ line paths.
 ketos \
   --device cuda \
   --workers 4 \
@@ -59,8 +60,8 @@ ketos \
   --batch-size "$BATCH" \
   --quit early \
   --lag "$LAG" \
-  --evaluation-data "$KRAKEN_GT/eval.txt" \
-  $(cat "$KRAKEN_GT/train.txt")
+  -e "$KRAKEN_GT/eval.txt" \
+  -t "$KRAKEN_GT/train.txt"
 
 echo "[kraken] model saved to ${OUT}_best.mlmodel (or similar)"
 
