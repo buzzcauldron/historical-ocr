@@ -84,10 +84,24 @@ def word_error_rate(reference: str, hypothesis: str) -> tuple[float, int]:
     return dist / max(len(" ".join(ref_words)), 1), len(ref_words)
 
 
-def _year_from_meta(meta: dict[str, Any]) -> int | None:
-    raw = str(meta.get("issue_date") or "")
-    m = re.match(r"(\d{4})", raw)
-    return int(m.group(1)) if m else None
+def _year_from_meta(meta: dict[str, Any], *, record_id: str = "") -> int | None:
+    for key in ("issue_date", "date", "publication_date"):
+        raw = str(meta.get(key) or "")
+        m = re.match(r"(\d{4})", raw)
+        if m:
+            return int(m.group(1))
+    for token in (
+        str(meta.get("source_record") or ""),
+        str(meta.get("record_id") or ""),
+        record_id,
+    ):
+        m = re.search(r"_(\d{4})-\d{2}-\d{2}_", token)
+        if m:
+            return int(m.group(1))
+        m = re.search(r"_(\d{4})-\d{2}-\d{2}$", token)
+        if m:
+            return int(m.group(1))
+    return None
 
 
 def ocr_page_with_preset(
@@ -173,6 +187,7 @@ def eval_newspaper_gt(
     limit: int | None = None,
     out_dir: Path | None = None,
     preset: EvalPreset = DEFAULT_QUALITY_TIER,
+    settings: Settings | None = None,
     log_fn: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     """OCR GT images with a quality preset and score against reference text (no LLM)."""
@@ -197,7 +212,8 @@ def eval_newspaper_gt(
         split_name = str(rec.get("split") or "train")
         stem = str(rec.get("stem") or record_id.replace("/", "_"))
         ref_path = gt_dir / str(rec["text"])
-        meta_path = gt_dir / str(rec["meta"])
+        meta_rel = rec.get("meta")
+        meta_path = gt_dir / str(meta_rel) if meta_rel else None
         image_rel = rec.get("image")
         image_path = gt_dir / str(image_rel) if image_rel else None
 
@@ -210,9 +226,9 @@ def eval_newspaper_gt(
 
         reference = ref_path.read_text(encoding="utf-8")
         meta: dict[str, Any] = {}
-        if meta_path.is_file():
+        if meta_path and meta_path.is_file():
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        year = _year_from_meta(meta)
+        year = _year_from_meta(meta, record_id=record_id)
         doc_type = suggest_print_doc_type(year=year) if year else "unknown"
 
         _log(f"ocr: {record_id} ({split_name}, {doc_type})")
@@ -221,6 +237,7 @@ def eval_newspaper_gt(
                 image_path,
                 publication_year=year,
                 preset=preset,
+                settings=settings,
             )
             pred_path = pred_dir / f"{stem}.txt"
             pred_path.write_text(hypothesis + "\n", encoding="utf-8")

@@ -10,3 +10,8 @@ dist/
 build/
 *.egg-info/
 .DS_Store
+*.pyc
+.cursor/
+.tdad/
+.claude/
+*.local-bak

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "gt_dir": "/Users/halxiii/Projects/historical ocr/data/user_gt",
+  "split": "train",
+  "limit": 1,
+  "scored": 1,
+  "mean_cer": 0.031335,
+  "mean_wer": 0.031335,
+  "by_doc_type": {
+    "unknown": {
+      "scored": 1,
+      "mean_cer": 0.031335,
+      "mean_wer": 0.031335
+    }
+  },
+  "preset": "medium",
+  "rules_only": true,
+  "at": "2026-06-13T15:42:16+00:00",
+  "pages": [
+    {
+      "record_id": "BlackNews_19700110_002",
+      "split": "train",
+      "doc_type": "unknown",
+      "publication_year": null,
+      "cer": 0.031335,
+      "wer": 0.031335,
+      "ref_chars": 6606,
+      "ref_words": 1160,
+      "hypothesis": "predictions/BlackNews_19700110_002.txt",
+      "image": "train/images/BlackNews_19700110_002.jpg"
+    }
+  ]
+}

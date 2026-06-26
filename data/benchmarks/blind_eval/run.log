@@ -1,0 +1,91 @@
+{
+  "task": "page_cnn",
+  "images": 24,
+  "models": {
+    "/Users/halxiii/Projects/historical ocr/models/page_cnn.pt": {
+      "pages": 24,
+      "print_accuracy": 1.0,
+      "mean_print_confidence": 1.0,
+      "checkpoint_val_acc": 0.9975015615240475
+    },
+    "/Users/halxiii/Projects/historical ocr/models/page_cnn_test.pt": {
+      "pages": 24,
+      "print_accuracy": 1.0,
+      "mean_print_confidence": 0.994639,
+      "checkpoint_val_acc": 1.0
+    }
+  }
+}
+Traceback (most recent call last):
+  File "/Users/halxiii/Projects/historical ocr/scripts/blind_model_eval.py", line 170, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/Users/halxiii/Projects/historical ocr/scripts/blind_model_eval.py", line 114, in main
+    baseline = eval_ocr_preset(
+        args.gt_dir,
+    ...<2 lines>...
+        label="medium_eng",
+    )
+  File "/Users/halxiii/Projects/historical ocr/scripts/blind_model_eval.py", line 70, in eval_ocr_preset
+    report = eval_newspaper_gt(
+        gt_dir,
+    ...<5 lines>...
+        log_fn=lambda m: print(m, file=sys.stderr),
+    )
+TypeError: eval_newspaper_gt() got an unexpected keyword argument 'settings'
+ocr: sn82014385_1809-07-08_p1_e1 (val, nineteenth_century)
+ocr: sn82014385_1809-07-26_p2_e1 (val, nineteenth_century)
+ocr: sn82014385_1809-09-23_p4_e1 (val, nineteenth_century)
+ocr: sn82014385_1809-09-30_p3_e1 (val, nineteenth_century)
+ocr: sn82014385_1809-10-18_p3_e1 (val, nineteenth_century)
+ocr: sn82014385_1809-11-25_p2_e1 (val, nineteenth_century)
+ocr: sn82014385_1809-11-25_p3_e1 (val, nineteenth_century)
+ocr: sn82014385_1809-12-06_p3_e1 (val, nineteenth_century)
+ocr: sn82014385_1809-12-06_p4_e1 (val, nineteenth_century)
+ocr: sn82014385_1809-12-09_p1_e1 (val, nineteenth_century)
+ocr: sn82014385_1809-12-09_p4_e1 (val, nineteenth_century)
+ocr: sn82014385_1809-12-13_p4_e1 (val, nineteenth_century)
+ocr: sn82014385_1810-01-06_p2_e1 (val, nineteenth_century)
+ocr: sn82014385_1810-01-17_p3_e1 (val, nineteenth_century)
+ocr: sn82014385_1810-01-27_p1_e1 (val, nineteenth_century)
+ocr: sn82014385_1810-01-31_p1_e1 (val, nineteenth_century)
+ocr: sn82014385_1810-02-14_p1_e1 (val, nineteenth_century)
+ocr: sn82014385_1810-02-14_p4_e1 (val, nineteenth_century)
+ocr: sn82014385_1810-04-07_p1_e1 (val, nineteenth_century)
+ocr: sn82014385_1810-04-07_p2_e1 (val, nineteenth_century)
+ocr: sn82014385_1810-04-11_p3_e1 (val, nineteenth_century)
+ocr: sn82014385_1810-05-23_p1_e1 (val, nineteenth_century)
+ocr: sn82014385_1810-05-30_p3_e1 (val, nineteenth_century)
+ocr: sn82014782_1789-03-21_p1_e2 (val, enlightenment_antiqua)
+report → /Users/halxiii/Projects/historical ocr/data/newspaper_gt/eval/blind_medium_eng_2026-06-18T20-05-39Z/report.json
+[medium] mean CER 0.3518  mean WER 0.3518 (24 pages)
+  enlightenment_antiqua: CER 0.6578  WER 0.6578 (1 pages)
+  nineteenth_century: CER 0.3385  WER 0.3385 (23 pages)
+
+blind summary → /Users/halxiii/Projects/historical ocr/data/benchmarks/blind_eval/blind_20260618T200535Z.json
+{
+  "task": "page_cnn",
+  "images": 24,
+  "models": {
+    "/Users/halxiii/Projects/historical ocr/models/page_cnn.pt": {
+      "pages": 24,
+      "print_accuracy": 1.0,
+      "mean_print_confidence": 1.0,
+      "checkpoint_val_acc": 0.9975015615240475
+    },
+    "/Users/halxiii/Projects/historical ocr/models/page_cnn_test.pt": {
+      "pages": 24,
+      "print_accuracy": 1.0,
+      "mean_print_confidence": 0.994639,
+      "checkpoint_val_acc": 1.0
+    }
+  }
+}
+{
+  "label": "medium_eng",
+  "preset": "medium",
+  "scored": 24,
+  "mean_cer": 0.351766,
+  "mean_wer": 0.351766,
+  "report": "/Users/halxiii/Projects/historical ocr/data/newspaper_gt/eval/blind_medium_eng_2026-06-18T20-05-39Z/report.json"
+}

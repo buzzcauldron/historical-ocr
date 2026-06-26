@@ -1011,6 +1011,7 @@ def build_parser() -> argparse.ArgumentParser:
     np_train.add_argument("--epochs", type=int, default=30)
     np_train.add_argument("--batch-size", type=int, default=8)
     np_train.add_argument("--patience", type=int, default=5)
+    np_train.add_argument("--eval-limit", type=int, default=None, dest="eval_limit")
     np_train.set_defaults(func=cmd_newspaper_train)
 
     np_eval = np_sub.add_parser("eval", help="Eval rules-only OCR vs prepared val split")

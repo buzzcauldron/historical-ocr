@@ -46,3 +46,11 @@ def test_rules_only_clean_drops_orphan_line_without_llm() -> None:
     out = rules_only_clean(raw, s)
     assert "1" not in out.splitlines()
     assert "Next paragraph" in out
+
+
+def test_year_from_meta_parses_record_id() -> None:
+    from historical_ocr.ml.gt_eval import _year_from_meta
+
+    assert _year_from_meta({}, record_id="ca_sn82014385_1809-07-08_p1_e1") == 1809
+    assert _year_from_meta({"source_record": "sn82014385_1810-05-30_p3_e1"}) == 1810
+    assert _year_from_meta({"issue_date": "1797-06-14"}) == 1797

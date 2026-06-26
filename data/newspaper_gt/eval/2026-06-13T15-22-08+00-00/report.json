@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "gt_dir": "/Users/halxiii/Projects/historical ocr/data/newspaper_gt",
+  "split": "val",
+  "limit": 8,
+  "scored": 8,
+  "mean_cer": 0.379817,
+  "mean_wer": 0.379817,
+  "by_doc_type": {
+    "nineteenth_century": {
+      "scored": 8,
+      "mean_cer": 0.379817,
+      "mean_wer": 0.379817
+    }
+  },
+  "preset": "medium",
+  "rules_only": true,
+  "at": "2026-06-13T15:31:53+00:00",
+  "pages": [
+    {
+      "record_id": "sn82014385_1809-07-08_p1_e1",
+      "split": "val",
+      "doc_type": "nineteenth_century",
+      "publication_year": 1809,
+      "cer": 0.300523,
+      "wer": 0.300523,
+      "ref_chars": 15117,
+      "ref_words": 2630,
+      "hypothesis": "predictions/sn82014385_1809-07-08_p1_e1.txt",
+      "image": "val/images/sn82014385_1809-07-08_p1_e1.jpg"
+    },
+    {
+      "record_id": "sn82014385_1809-07-26_p2_e1",
+      "split": "val",
+      "doc_type": "nineteenth_century",
+      "publication_year": 1809,
+      "cer": 0.49208,
+      "wer": 0.49208,
+      "ref_chars": 20582,
+      "ref_words": 3833,
+      "hypothesis": "predictions/sn82014385_1809-07-26_p2_e1.txt",
+      "image": "val/images/sn82014385_1809-07-26_p2_e1.jpg"
+    },
+    {
+      "record_id": "sn82014385_1809-09-23_p4_e1",
+      "split": "val",
+      "doc_type": "nineteenth_century",
+      "publication_year": 1809,
+      "cer": 0.398298,
+      "wer": 0.398298,
+      "ref_chars": 15511,
+      "ref_words": 2799,
+      "hypothesis": "predictions/sn82014385_1809-09-23_p4_e1.txt",
+      "image": "val/images/sn82014385_1809-09-23_p4_e1.jpg"
+    },
+    {
+      "record_id": "sn82014385_1809-09-30_p3_e1",
+      "split": "val",
+      "doc_type": "nineteenth_century",
+      "publication_year": 1809,
+      "cer": 0.417331,
+      "wer": 0.417331,
+      "ref_chars": 19814,
+      "ref_words": 3520,
+      "hypothesis": "predictions/sn82014385_1809-09-30_p3_e1.txt",
+      "image": "val/images/sn82014385_1809-09-30_p3_e1.jpg"
+    },
+    {
+      "record_id": "sn82014385_1809-10-18_p3_e1",
+      "split": "val",
+      "doc_type": "nineteenth_century",
+      "publication_year": 1809,
+      "cer": 0.38075,
+      "wer": 0.38075,
+      "ref_chars": 21371,
+      "ref_words": 3854,
+      "hypothesis": "predictions/sn82014385_1809-10-18_p3_e1.txt",
+      "image": "val/images/sn82014385_1809-10-18_p3_e1.jpg"
+    },
+    {
+      "record_id": "sn82014385_1809-11-25_p2_e1",
+      "split": "val",
+      "doc_type": "nineteenth_century",
+      "publication_year": 1809,
+      "cer": 0.504594,
+      "wer": 0.504594,
+      "ref_chars": 19810,
+      "ref_words": 3783,
+      "hypothesis": "predictions/sn82014385_1809-11-25_p2_e1.txt",
+      "image": "val/images/sn82014385_1809-11-25_p2_e1.jpg"
+    },
+    {
+      "record_id": "sn82014385_1809-11-25_p3_e1",
+      "split": "val",
+      "doc_type": "nineteenth_century",
+      "publication_year": 1809,
+      "cer": 0.466671,
+      "wer": 0.466671,
+      "ref_chars": 14807,
+      "ref_words": 2888,
+      "hypothesis": "predictions/sn82014385_1809-11-25_p3_e1.txt",
+      "image": "val/images/sn82014385_1809-11-25_p3_e1.jpg"
+    },
+    {
+      "record_id": "sn82014385_1809-12-06_p3_e1",
+      "split": "val",
+      "doc_type": "nineteenth_century",
+      "publication_year": 1809,
+      "cer": 0.078288,
+      "wer": 0.078288,
+      "ref_chars": 18764,
+      "ref_words": 3329,
+      "hypothesis": "predictions/sn82014385_1809-12-06_p3_e1.txt",
+      "image": "val/images/sn82014385_1809-12-06_p3_e1.jpg"
+    }
+  ]
+}

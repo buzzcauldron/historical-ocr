@@ -4,16 +4,22 @@
 #SBATCH --gres=gpu:v100-32:1
 #SBATCH -N 1
 #SBATCH --ntasks-per-node=5
-#SBATCH -t 24:00:00
+#SBATCH -t 48:00:00
 #SBATCH -A hum260002p
 #SBATCH -o %x-%j.out
-# Fine-tune Tesseract LSTM (histnews) via tesstrain on Bridges2.
+#SBATCH -e %x-%j.err
 set -euo pipefail
 
 ROOT="${HISTORICAL_OCR_ROOT:-/ocean/projects/hum260002p/sstrickland/historical-ocr}"
 DATA="${TESS_TRAIN_DATA:-$ROOT/data/tesseract_train}"
 OUT="${TESS_TRAIN_MODEL:-$ROOT/models/histnews.traineddata}"
 VENV="${HISTORICAL_OCR_VENV:-$ROOT/.venv}"
+export TESS_TRAIN_MAX_ITER="${TESS_TRAIN_MAX_ITER:-3000}"
+export TESS_TRAIN_MAKE_JOBS="${TESS_TRAIN_MAKE_JOBS:-16}"
+export TESSDATA_PREFIX="${TESSDATA_PREFIX:-/usr/share/tesseract/tessdata}"
+
+mkdir -p "$ROOT/logs"
+exec > >(tee -a "$ROOT/logs/tess-train-${SLURM_JOB_ID:-local}.log") 2>&1
 
 # shellcheck disable=SC1091
 source "$ROOT/scripts/bridges_load_python.sh"

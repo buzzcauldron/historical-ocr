@@ -106,12 +106,34 @@ def prepare_training_corpus(
 
             text = text_path.read_text(encoding="utf-8")
             (txt_dir / f"{stem}.txt").write_text(text.rstrip() + "\n", encoding="utf-8")
+
+            source_meta: dict[str, Any] = {}
+            source_meta_rel = rec.get("meta")
+            if source_meta_rel:
+                source_meta_path = corpus / str(source_meta_rel)
+                if source_meta_path.is_file():
+                    source_meta = json.loads(source_meta_path.read_text(encoding="utf-8"))
+
             meta = {
                 "record_id": stem,
                 "split": split,
                 "source_corpus": src.name,
                 "source_record": record_id,
             }
+            for key in (
+                "issue_date",
+                "lccn",
+                "newspaper_title",
+                "place_of_publication",
+                "page",
+                "edition_order",
+            ):
+                if key in source_meta:
+                    meta[key] = source_meta[key]
+            if "issue_date" not in meta:
+                m2 = re.search(r"_(\d{4}-\d{2}-\d{2})_", record_id)
+                if m2:
+                    meta["issue_date"] = m2.group(1)
             (meta_dir / f"{stem}.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
 
             line = _ketos_line(image_dest.resolve(), text)
@@ -127,9 +149,11 @@ def prepare_training_corpus(
 
             manifest["records"][stem] = {
                 "split": split,
+                "stem": stem,
                 "source": src.name,
                 "image": str(image_dest.relative_to(out_root)),
                 "text": str((txt_dir / f"{stem}.txt").relative_to(out_root)),
+                "meta": str((meta_dir / f"{stem}.json").relative_to(out_root)),
             }
             n += 1
         manifest["sources"].append({"name": src.name, "path": str(corpus), "imported": n})

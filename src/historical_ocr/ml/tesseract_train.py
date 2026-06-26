@@ -147,16 +147,76 @@ def _save_manifest(root: Path, manifest: dict[str, Any]) -> None:
     _manifest_path(root).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
+def _write_spread_box(png: Path, text: str, box_path: Path) -> None:
+    """Write per-character boxes spread across the line image (tesstrain CTC needs this)."""
+    from PIL import Image
+
+    with Image.open(png) as im:
+        width, height = im.size
+    chars = list(text.rstrip("\n"))
+    if not chars:
+        box_path.write_text("", encoding="utf-8")
+        return
+    char_w = max(1, width // len(chars))
+    lines: list[str] = []
+    for i, ch in enumerate(chars):
+        left = i * char_w
+        right = width if i == len(chars) - 1 else min(width, (i + 1) * char_w)
+        token = "\t" if ch == "\t" else ch
+        lines.append(f"{token} {left} 0 {right} {height} 0")
+    box_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _box_is_dummy(box_path: Path) -> bool:
+    if not box_path.is_file() or box_path.stat().st_size == 0:
+        return True
+    coords: set[tuple[str, str, str, str]] = set()
+    for line in box_path.read_text(encoding="utf-8").splitlines():
+        parts = line.split()
+        if len(parts) >= 4:
+            coords.add(tuple(parts[1:5]))
+    return len(coords) <= 1
+
+
+def ensure_tesstrain_boxes(
+    ground_truth_dir: Path,
+    *,
+    log_fn: Callable[[str], None] | None = None,
+) -> int:
+    """Ensure each line has spread .box files (fixes tesstrain dummy-box CTC failures)."""
+    ground_truth_dir = ground_truth_dir.expanduser().resolve()
+    fixed = 0
+    for gt_txt in ground_truth_dir.glob("*.gt.txt"):
+        png = gt_txt.with_name(gt_txt.name.replace(".gt.txt", ".png"))
+        if not png.is_file():
+            continue
+        box = png.with_suffix(".box")
+        if box.is_file() and not _box_is_dummy(box):
+            continue
+        text = gt_txt.read_text(encoding="utf-8")
+        _write_spread_box(png, text, box)
+        fixed += 1
+    if log_fn and fixed:
+        log_fn(f"boxes: wrote/spread {fixed} line box files in {ground_truth_dir}")
+    return fixed
+
+
 def _write_line_pair(gt_dir: Path, stem: str, crop, text: str) -> None:
     from PIL import Image
 
     png = gt_dir / f"{stem}.png"
     txt = gt_dir / f"{stem}.gt.txt"
+    box = gt_dir / f"{stem}.box"
+    line_text = text.rstrip() + "\n"
     if isinstance(crop, Image.Image):
-        crop.save(png, format="PNG")
+        crop.save(png, format="PNG", dpi=(300, 300))
     else:
         shutil.copy2(crop, png)
-    txt.write_text(text.rstrip() + "\n", encoding="utf-8")
+        with Image.open(png) as im:
+            if not im.info.get("dpi"):
+                im.save(png, format="PNG", dpi=(300, 300))
+    txt.write_text(line_text, encoding="utf-8")
+    _write_spread_box(png, line_text, box)
 
 
 def prepare_tesstrain_ground_truth(
@@ -474,6 +534,136 @@ def _resolve_tessdata_dir(
     return tessdata.expanduser() if tessdata and tessdata.expanduser().is_dir() else None
 
 
+def _resolve_tessdata_prefix(tessdata_dir: Path | None = None) -> Path | None:
+    """Return TESSDATA_PREFIX root containing configs/lstm.train (not tessdata_best alone)."""
+    import os
+
+    candidates: list[Path] = []
+    for env_key in ("TESSDATA_PREFIX",):
+        raw = os.environ.get(env_key)
+        if raw:
+            candidates.append(Path(raw).expanduser())
+    if tessdata_dir is not None:
+        td = tessdata_dir.expanduser()
+        candidates.extend([td, td.parent, td.parent.parent])
+    candidates.extend([
+        Path("/usr/share/tesseract/tessdata"),
+        Path("/usr/share/tesseract-ocr/4.00/tessdata"),
+        Path("/usr/share/tesseract-ocr/tessdata"),
+        Path("/opt/homebrew/share/tessdata"),
+        Path("/usr/local/share/tessdata"),
+    ])
+    seen: set[Path] = set()
+    for cand in candidates:
+        if cand in seen:
+            continue
+        seen.add(cand)
+        if (cand / "configs" / "lstm.train").is_file():
+            return cand
+    return None
+
+
+def _clean_tesstrain_state(
+    tesstrain_root: Path,
+    *,
+    model_name: str,
+    ground_truth_dir: Path,
+    log_fn: Callable[[str], None] | None = None,
+) -> None:
+    import subprocess
+
+    cmd = [
+        "make",
+        "-C",
+        str(tesstrain_root),
+        "clean-lstmf",
+        "clean-output",
+        f"MODEL_NAME={model_name}",
+        f"GROUND_TRUTH_DIR={ground_truth_dir}",
+    ]
+    if log_fn:
+        log_fn(f"clean: {' '.join(cmd)}")
+    subprocess.run(cmd, check=False, capture_output=True, text=True)
+
+
+def _find_training_checkpoint(model_dir: Path, model_name: str) -> Path | None:
+    ckpt_dir = model_dir / "checkpoints"
+    if not ckpt_dir.is_dir():
+        return None
+    candidates = [
+        ckpt_dir / f"{model_name}_checkpoint",
+        *sorted(ckpt_dir.glob(f"{model_name}*.checkpoint"), key=lambda p: p.stat().st_mtime, reverse=True),
+    ]
+    for path in candidates:
+        if path.is_file() and path.stat().st_size > 100_000:
+            return path
+    return None
+
+
+def _export_traineddata_from_checkpoint(
+    checkpoint: Path,
+    proto_model: Path,
+    out_model: Path,
+    *,
+    env: dict[str, str],
+    log_fn: Callable[[str], None] | None = None,
+) -> Path:
+    import subprocess
+
+    out_model = out_model.expanduser().resolve()
+    out_model.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "lstmtraining",
+        "--stop_training",
+        "--continue_from",
+        str(checkpoint),
+        "--traineddata",
+        str(proto_model),
+        "--model_output",
+        str(out_model),
+    ]
+    if log_fn:
+        log_fn(f"export: {' '.join(cmd)}")
+    proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    if proc.returncode != 0:
+        raise RuntimeError(f"lstmtraining --stop_training failed: {(proc.stderr or proc.stdout)[-1200:]}")
+    if not out_model.is_file() or out_model.stat().st_size < 100_000:
+        raise RuntimeError(f"exported traineddata too small: {out_model}")
+    return out_model
+
+
+def _pick_traineddata_artifact(
+    model_dir: Path,
+    model_name: str,
+    *,
+    env: dict[str, str],
+    log_fn: Callable[[str], None] | None = None,
+) -> Path:
+    """Prefer a full-size traineddata; export from checkpoint when make only wrote the proto."""
+    proto = model_dir / f"{model_name}.traineddata"
+    best = model_dir / "tessdata_best" / f"{model_name}_checkpoint.traineddata"
+    candidates = [
+        best,
+        *sorted(model_dir.glob("tessdata_best/*.traineddata"), key=lambda p: p.stat().st_size, reverse=True),
+        proto,
+        *sorted(model_dir.glob("*.traineddata"), key=lambda p: p.stat().st_size, reverse=True),
+    ]
+    for path in candidates:
+        if path.is_file() and path.stat().st_size >= 100_000:
+            return path
+    checkpoint = _find_training_checkpoint(model_dir, model_name)
+    if checkpoint is None or not proto.is_file():
+        raise FileNotFoundError(f"no traineddata or checkpoint under {model_dir}")
+    export_path = model_dir / f"{model_name}_exported.traineddata"
+    return _export_traineddata_from_checkpoint(
+        checkpoint,
+        proto,
+        export_path,
+        env=env,
+        log_fn=log_fn,
+    )
+
+
 def train_from_ground_truth_dir(
     ground_truth_dir: Path,
     out_model: Path,
@@ -516,9 +706,14 @@ def train_from_ground_truth_dir(
         eng_parent = tessdata_resolved.parent / "eng.traineddata"
         if not eng_in_dir.is_file() and eng_parent.is_file():
             eng_in_dir.symlink_to(eng_parent)
+    tessdata_prefix = _resolve_tessdata_prefix(tessdata_resolved)
+    if tessdata_prefix is None:
+        raise RuntimeError(
+            "cannot find Tesseract configs/lstm.train — install tesseract-ocr "
+            "or set TESSDATA_PREFIX to a tessdata directory that includes configs/",
+        )
     env = dict(os.environ)
-    if tessdata_resolved is not None:
-        env["TESSDATA_PREFIX"] = str(tessdata_resolved)
+    env["TESSDATA_PREFIX"] = str(tessdata_prefix)
 
     gt_link = tesstrain_root / "data" / f"{model_name}-ground-truth"
     gt_link.parent.mkdir(parents=True, exist_ok=True)
@@ -530,6 +725,15 @@ def train_from_ground_truth_dir(
         if log_fn:
             log_fn(msg)
 
+    _clean_tesstrain_state(
+        tesstrain_root,
+        model_name=model_name,
+        ground_truth_dir=ground_truth_dir,
+        log_fn=_log,
+    )
+    ensure_tesstrain_boxes(ground_truth_dir, log_fn=_log)
+
+    make_jobs = os.environ.get("TESS_TRAIN_MAKE_JOBS", "8")
     make_targets = ["training"]
     if run_traineddata:
         make_targets.append("traineddata")
@@ -537,6 +741,7 @@ def train_from_ground_truth_dir(
     for target in make_targets:
         cmd = [
             "make",
+            f"-j{make_jobs}",
             "-C",
             str(tesstrain_root),
             target,
@@ -549,18 +754,18 @@ def train_from_ground_truth_dir(
         ]
         if tessdata_resolved is not None:
             cmd.append(f"TESSDATA={tessdata_resolved}")
-        _log(f"train: {' '.join(cmd)}")
+        _log(
+            f"train: {' '.join(cmd)} "
+            f"(TESSDATA_PREFIX={tessdata_prefix}, TESSDATA={tessdata_resolved})",
+        )
         proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
-        if proc.returncode != 0:
+        if proc.returncode != 0 and target == "traineddata":
+            _log(f"warn: tesstrain {target} failed, will export from checkpoint")
+        elif proc.returncode != 0:
             raise RuntimeError(f"tesstrain {target} failed: {(proc.stderr or proc.stdout)[-1200:]}")
 
     model_dir = tesstrain_root / "data" / model_name
-    trained = model_dir / f"{model_name}.traineddata"
-    if not trained.is_file():
-        alt = sorted(model_dir.glob("*.traineddata"), key=lambda p: p.stat().st_mtime, reverse=True)
-        trained = alt[0] if alt else trained
-    if not trained.is_file():
-        raise FileNotFoundError(f"no traineddata under {model_dir}")
+    trained = _pick_traineddata_artifact(model_dir, model_name, env=env, log_fn=_log)
 
     out_model.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(trained, out_model)
@@ -573,6 +778,8 @@ def train_from_ground_truth_dir(
         "ratio_train": ratio_train,
         "ground_truth_dir": str(ground_truth_dir),
         "tesstrain_root": str(tesstrain_root),
+        "tessdata_prefix": str(tessdata_prefix),
+        "tessdata_dir": str(tessdata_resolved) if tessdata_resolved else None,
         "path": str(out_model),
     }
     out_model.with_suffix(".meta.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
