@@ -8,7 +8,7 @@ typeface: roman
 
 ocr:
   model: latin_humanist
-  lang: lat+ita+eng
+  lang: lat+frk+eng
   psm: 6
   preprocess:
     autocontrast: true

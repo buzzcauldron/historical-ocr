@@ -6,6 +6,9 @@ __pycache__/
 jobs/
 data/page_cnn/
 models/*.pt
+models/*.traineddata
+models/*.mlmodel
+models/tessdata/
 dist/
 build/
 *.egg-info/
