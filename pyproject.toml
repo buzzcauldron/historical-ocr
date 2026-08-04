@@ -5,14 +5,52 @@ build-backend = "hatchling.build"
 [tool.hatch.metadata]
 allow-direct-references = true
 
+[tool.hatch.version]
+path = "src/historical_ocr/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/scripts",
+  "/docs",
+  "/README.md",
+  "/LICENSE",
+  "/pyproject.toml",
+  "/.env.example",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/historical_ocr"]
+
 [project]
 name = "historical-ocr"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Self-contained pipeline for computational-ready text from historical sources"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "historical-ocr contributors" }]
+keywords = [
+  "ocr",
+  "historical",
+  "tesseract",
+  "tei",
+  "digital-humanities",
+  "newspapers",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Image Recognition",
+  "Topic :: Text Processing",
+]
 dependencies = [
   # Core
   "pydantic>=2.0",
@@ -39,30 +77,34 @@ dependencies = [
   "google-generativeai>=0.7",
   # URL fetching
   "playwright>=1.40",
-  # Sibling packages — pulled from GitHub (not on PyPI)
+]
+
+[project.optional-dependencies]
+# Sibling / ecosystem packages (GitHub; not on PyPI)
+ecosystem = [
   "ocr-cleanup @ git+https://github.com/buzzcauldron/ocr-cleanup.git@master",
   "bib-ocr @ git+https://github.com/buzzcauldron/bib-ocr.git@master",
   "strigil @ git+https://github.com/buzzcauldron/strigil.git@main",
 ]
-
-[project.optional-dependencies]
 # ML training and advanced backends — not needed for normal Tesseract OCR.
-# Install with: pip install -e ".[ml]"
 ml = [
   "torch>=2.2",
   "torchvision>=0.17",
   "datasets>=2.18",
   "huggingface_hub>=0.23",
   "pyarrow>=15.0",
-  "transformers>=4.30",   # TrOCR backend
-  "ultralytics>=8.0",     # YOLO figure detection
-  "matplotlib>=3.7",      # training visualisation
+  "transformers>=4.30",
+  "ultralytics>=8.0",
+  "matplotlib>=3.7",
 ]
-dev = ["pytest>=8.0", "historical-ocr[ml]"]
+dev = ["pytest>=8.0", "historical-ocr[ml,ecosystem]"]
+full = ["historical-ocr[ecosystem,ml]"]
 
-# Note: manuscript-fingerprint (type-case fingerprinting for early-modern era routing)
-# is an optional CLI tool, not a Python dependency:
-#   pip install -e ../manuscript-fingerprint
+[project.urls]
+Homepage = "https://github.com/buzzcauldron/historical-ocr"
+Repository = "https://github.com/buzzcauldron/historical-ocr"
+Issues = "https://github.com/buzzcauldron/historical-ocr/issues"
+Documentation = "https://github.com/buzzcauldron/historical-ocr/blob/main/docs/USER_GUIDE.md"
 
 [project.scripts]
 historical-ocr = "historical_ocr.cli:main"

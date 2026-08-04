@@ -27,7 +27,11 @@ python3 -m venv "$VENV"
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
 pip install -U pip setuptools wheel
-pip install -e "$ROOT"
+# Core package + optional GitHub ecosystem deps when network access allows.
+if ! pip install -e "$ROOT[ecosystem]"; then
+  echo "  warn: ecosystem extras failed (ocr-cleanup/strigil/bib-ocr); installing core only"
+  pip install -e "$ROOT"
+fi
 
 # ── Playwright browsers (strigil / transcriber-shell) ────────────────────────
 if python -c "import playwright" 2>/dev/null; then

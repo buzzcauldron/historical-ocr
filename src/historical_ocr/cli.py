@@ -640,7 +640,9 @@ def cmd_convert_images(args: argparse.Namespace) -> int:
 
 
 def cmd_ecosystem(_args: argparse.Namespace) -> int:
-    doc = Path(__file__).resolve().parents[2] / "docs" / "ECOSYSTEM.md"
+    from historical_ocr.paths import project_root
+
+    doc = project_root() / "docs" / "ECOSYSTEM.md"
     if doc.is_file():
         print(doc.read_text(encoding="utf-8"))
     else:

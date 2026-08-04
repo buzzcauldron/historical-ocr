@@ -18,20 +18,15 @@ from historical_ocr.document_types.era_chronology import infer_publication_year
 from historical_ocr.document_types.language_matrix import resolve_doc_type_for_language_year
 from historical_ocr.document_types.languages import normalize_print_language
 from historical_ocr.ocr.model_registry import select_ocr_stack
+from historical_ocr.paths import document_types_print_dir
 
 _ENV_RE = re.compile(r"\$\{(\w+)\}")
 
 NormalizationMode = Literal["diplomatic", "normalized", "modern"]
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
-
-
 def _builtin_dirs() -> list[Path]:
-    return [
-        _repo_root() / "document_types" / "print",
-    ]
+    return [document_types_print_dir()]
 
 
 def _expand_env(val: str) -> str:

@@ -9,7 +9,8 @@ from typing import Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+from historical_ocr.paths import project_root
+
 _SHARED_ENV_KEYS = (
     "GOOGLE_API_KEY",
     "ANTHROPIC_API_KEY",
@@ -26,11 +27,12 @@ def bootstrap_shared_env() -> None:
     except ImportError:
         return
 
-    shell_env = _REPO_ROOT.parent / "transcription-shell" / ".env"
+    root = project_root()
+    shell_env = root.parent / "transcription-shell" / ".env"
     if not shell_env.is_file():
         return
 
-    local_env = _REPO_ROOT / ".env"
+    local_env = root / ".env"
     local_vals = dotenv_values(local_env) if local_env.is_file() else {}
     shell_vals = dotenv_values(shell_env)
 

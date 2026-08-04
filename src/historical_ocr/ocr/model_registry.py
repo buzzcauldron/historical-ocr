@@ -10,15 +10,13 @@ from typing import Any
 
 import yaml
 
+from historical_ocr.paths import ocr_models_registry_dir
+
 _ENV_RE = re.compile(r"\$\{(\w+)\}")
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
-
-
 def _default_registry_dir() -> Path:
-    return _repo_root() / "document_types" / "print" / "models"
+    return ocr_models_registry_dir()
 
 
 def _expand_env(val: str) -> str:
