@@ -1,0 +1,11 @@
+# Modern / primarily monotonic Greek (Tesseract ell)
+name: ell_modern
+engine: tesseract
+tesseract_lang: ell+eng
+psm: 6
+languages: [el-Grek]
+eras: [modern, contemporary]
+scripts: [greek]
+typefaces: [roman, greek]
+preprocess:
+  autocontrast: true

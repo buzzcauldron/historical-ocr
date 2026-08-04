@@ -52,10 +52,12 @@ else
       tesseract-ocr poppler-utils \
       tesseract-ocr-eng tesseract-ocr-lat tesseract-ocr-deu \
       tesseract-ocr-fra tesseract-ocr-ita tesseract-ocr-spa \
-      tesseract-ocr-script-fraktur || true
+      tesseract-ocr-ell tesseract-ocr-grc \
+      tesseract-ocr-script-fraktur tesseract-ocr-script-greek || true
   elif command -v dnf >/dev/null 2>&1; then
     sudo dnf install -y tesseract tesseract-langpack-eng tesseract-langpack-deu \
-      tesseract-langpack-fra tesseract-langpack-ita tesseract-langpack-spa poppler-utils || true
+      tesseract-langpack-fra tesseract-langpack-ita tesseract-langpack-spa \
+      tesseract-langpack-ell tesseract-langpack-grc poppler-utils || true
   else
     echo "  warn: install tesseract manually — brew install tesseract (macOS) or apt install tesseract-ocr (Linux)"
   fi

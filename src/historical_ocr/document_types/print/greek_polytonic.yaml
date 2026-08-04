@@ -1,0 +1,26 @@
+# Polytonic / classical Greek print (early modern to 20th c. scholarly)
+name: greek_polytonic
+language: grc-Grek
+era: early_modern
+era_range: 1450-1981
+script: greek
+typeface: greek
+
+ocr:
+  model: grc_polytonic
+  lang: grc+eng
+  psm: 6
+  preprocess:
+    autocontrast: true
+
+layout:
+  backend: tesseract
+
+ocr_combination: tesseract_then_clean
+
+normalization:
+  mode: diplomatic
+
+notes: >
+  Diplomatic polytonic Greek (accents, breathings) via Tesseract grc.
+  Keep long-s-free Greek characters as OCR’d; Underwood rules are Latin-script oriented.

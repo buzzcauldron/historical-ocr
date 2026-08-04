@@ -43,6 +43,18 @@ LANGUAGE_ERA_MATRIX: dict[str, tuple[EraBand, ...]] = {
         EraBand(1901, 2000, "twentieth_century"),
         EraBand(2001, 2100, "contemporary_print"),
     ),
+    # Classical / polytonic Greek print (Tesseract grc through all eras)
+    "grc": (
+        EraBand(1450, 1829, "greek_polytonic"),
+        EraBand(1830, 1981, "greek_polytonic"),
+        EraBand(1982, 2100, "greek_polytonic"),
+    ),
+    # Modern Greek: polytonic for most historical print; ell after monotonic reform (1982)
+    "el": (
+        EraBand(1450, 1829, "greek_polytonic"),
+        EraBand(1830, 1981, "greek_polytonic"),
+        EraBand(1982, 2100, "greek_modern"),
+    ),
 }
 
 

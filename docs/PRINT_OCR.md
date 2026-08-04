@@ -8,15 +8,22 @@ Two independent axes combine when `--print-doc-type auto` (default):
 
 | Axis | Flag / env | Example |
 |------|------------|---------|
-| **Language** | `--print-language` / `HISTORICAL_OCR_PRINT_LANGUAGE` | `de`, `la`, `fr`, `en`, `auto` |
+| **Language** | `--print-language` / `HISTORICAL_OCR_PRINT_LANGUAGE` | `de`, `la`, `grc`, `el`, `fr`, `en`, `auto` |
 | **Year** | `--publication-year` / filename / `HISTORICAL_OCR_PUBLICATION_YEAR` | `1688`, `1850` |
 
 ```bash
 historical-ocr run job -i book.pdf --print-language de --publication-year 1720
 # → german_fraktur + deu_latf Tesseract stack
+
+historical-ocr run job -i greek.pdf --print-language grc
+# → greek_polytonic + Tesseract grc+eng (polytonic / classical)
+
+historical-ocr run job -i modern.pdf --print-language el --publication-year 2000
+# → greek_modern + Tesseract ell+eng
 ```
 
-Languages: `auto`, `en`, `la`, `de`, `fr`, `it`, `es`. Each has its own era→profile matrix.
+Languages: `auto`, `en`, `la`, `de`, `fr`, `it`, `es`, `grc` (Ancient/polytonic Greek), `el` (Modern Greek).  
+`greek` aliases to `grc`. Each has its own era→profile matrix.
 
 Explicit `--print-doc-type` still accepts a language overlay on the Tesseract stack.
 
@@ -33,7 +40,7 @@ When language is `en` or `auto`, publication year selects:
 | 1901–2000 | `twentieth_century` | `eng` (+ PDF text first) |
 | 2001+ | `contemporary_print` | `eng` (+ PDF text first) |
 
-Language overrides: German → `german_fraktur` (1600–1910); Latin → `humanist_roman` (1500–1700).
+Language overrides: German → `german_fraktur` (1600–1910); Latin → `humanist_roman` (1500–1700); Greek `grc` → `greek_polytonic`; Greek `el` → `greek_polytonic` until 1981, then `greek_modern`.
 
 Provide a year via:
 

@@ -84,7 +84,7 @@ python -m build --wheel
 | Platform | Packages |
 |----------|----------|
 | **macOS** | `brew install tesseract tesseract-lang poppler` and matching `python-tk@…` for the GUI |
-| **Debian / Ubuntu** | `sudo apt install tesseract-ocr poppler-utils python3-tk` (+ language packs as needed) |
+| **Debian / Ubuntu** | `sudo apt install tesseract-ocr poppler-utils python3-tk` (+ packs e.g. `tesseract-ocr-ell` / `tesseract-ocr-grc` for Greek) |
 
 ### Verify
 

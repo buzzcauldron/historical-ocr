@@ -15,7 +15,20 @@ _LANGUAGE_STACK: dict[str, str] = {
     "fr": "fra_early_modern",
     "it": "latin_humanist",
     "es": "spa_early_modern",
+    "grc": "grc_polytonic",
+    "el": "ell_modern",
 }
+
+
+def _stack_name_for(lang: str, spec: PrintDocumentTypeSpec) -> str | None:
+    if lang == "el":
+        # Historical Greek print is usually polytonic until post-1982 reform.
+        era = (spec.era or "").lower()
+        name = (spec.name or "").lower()
+        if name == "greek_modern" or era in ("contemporary",):
+            return "ell_modern"
+        return "grc_polytonic"
+    return _LANGUAGE_STACK.get(lang)
 
 
 def apply_language_overlay(
@@ -27,7 +40,7 @@ def apply_language_overlay(
     if lang == AUTO_LANGUAGE:
         return spec
 
-    stack_name = _LANGUAGE_STACK.get(lang)
+    stack_name = _stack_name_for(lang, spec)
     stack = select_ocr_stack(
         name=stack_name,
         language=lang,

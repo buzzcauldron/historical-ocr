@@ -1,0 +1,12 @@
+# Ancient / polytonic Greek (Tesseract grc)
+name: grc_polytonic
+engine: tesseract
+# grc for polytonic Greek; eng for bilingual scholarly / western books
+tesseract_lang: grc+eng
+psm: 6
+languages: [grc-Grek, el-Grek]
+eras: [renaissance, early_modern, modern]
+scripts: [greek]
+typefaces: [roman, greek]
+preprocess:
+  autocontrast: true

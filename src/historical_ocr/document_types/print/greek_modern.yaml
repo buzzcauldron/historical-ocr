@@ -1,0 +1,26 @@
+# Modern Greek print (post-monotonic reform)
+name: greek_modern
+language: el-Grek
+era: contemporary
+era_range: 1982-2100
+script: greek
+typeface: greek
+
+ocr:
+  model: ell_modern
+  lang: ell+eng
+  psm: 6
+  preprocess:
+    autocontrast: true
+
+layout:
+  backend: tesseract
+
+ocr_combination: tesseract_then_clean
+
+normalization:
+  mode: diplomatic
+
+notes: >
+  Modern Greek via Tesseract ell (monotonic-friendly).
+  For older polytonic editions use --print-language grc or --print-doc-type greek_polytonic.
