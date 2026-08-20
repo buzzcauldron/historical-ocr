@@ -1,0 +1,13 @@
+{
+  "trained_at": "2026-06-26T17:13:21+00:00",
+  "model_name": "histnews",
+  "line_pairs": 398373,
+  "start_model": "eng",
+  "max_iterations": 3000,
+  "ratio_train": 0.9,
+  "ground_truth_dir": "/ocean/projects/hum260002p/sstrickland/historical-ocr/data/tesseract_train/tesstrain/histnews-ground-truth",
+  "tesstrain_root": "/ocean/projects/hum260002p/sstrickland/historical-ocr/data/tesseract_train/tesstrain_repo",
+  "tessdata_prefix": "/usr/share/tesseract/tessdata",
+  "tessdata_dir": "/ocean/projects/hum260002p/sstrickland/historical-ocr/data/tesseract_train/tessdata_best",
+  "path": "/ocean/projects/hum260002p/sstrickland/historical-ocr/models/histnews.traineddata"
+}
