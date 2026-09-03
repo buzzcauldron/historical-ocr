@@ -19,7 +19,30 @@ HISTORICAL_LANGS: tuple[str, ...] = (
     "fra",
     "ita",
     "spa",
+    "ell",
+    "grc",
     "osd",
+)
+
+# histnews is an English/Antiqua LSTM fine-tune (start_model=eng, CA newspapers).
+# Agbeti-Messan et al. 2026 (arXiv:2604.00725): generic/English Tesseract is
+# competitive on Antiqua (~5% CER) but collapses on Fraktur (~21% CER). Do not
+# prepend histnews onto Fraktur, blackletter, or non-Latin scripts.
+_ANTIQUA_FINETUNE_LANGS = frozenset({"eng", "lat", "fra", "ita", "spa", "deu", "por", "nld"})
+_SKIP_FINETUNE_LANGS = frozenset(
+    {
+        "frk",
+        "deu_latf",
+        "grc",
+        "ell",
+        "script/Greek",
+        "script/Fraktur",
+        "chi_sim",
+        "chi_tra",
+        "ara",
+        "heb",
+        "rus",
+    }
 )
 
 _LANG_SPLIT = re.compile(r"[+|]")
@@ -142,13 +165,31 @@ def _install_finetune_tessdata(settings) -> Path | None:
     return dest_dir
 
 
+def finetune_applies_to(lang_bundle: str, *, finetune_lang: str = "histnews") -> bool:
+    """Whether an Antiqua newspaper fine-tune should prepend this Tesseract bundle."""
+    parts = langs_in_bundle(lang_bundle)
+    if not parts:
+        return False
+    if parts & _SKIP_FINETUNE_LANGS:
+        return False
+    if finetune_lang and finetune_lang in parts:
+        return True
+    return bool(parts & _ANTIQUA_FINETUNE_LANGS)
+
+
 def resolve_lang_bundle(lang_bundle: str, settings=None) -> str:
-    """Prepend fine-tuned lang when traineddata is installed."""
+    """Prepend fine-tuned Antiqua lang when traineddata is installed and compatible.
+
+    histnews is skipped for Fraktur (``frk``, ``deu_latf``) and Greek (``grc``,
+    ``ell``) bundles so the English newspaper LSTM cannot dominate those scripts.
+    """
     if settings is None:
         return lang_bundle
     lang = getattr(settings, "tesseract_finetune_lang", None)
     path = getattr(settings, "tesseract_finetune_path", None)
     if not lang or not path or not Path(path).expanduser().is_file():
+        return lang_bundle
+    if not finetune_applies_to(lang_bundle, finetune_lang=str(lang)):
         return lang_bundle
     parts = [p.strip() for p in lang_bundle.split("+") if p.strip()]
     if lang not in parts:

@@ -245,6 +245,10 @@ class Settings(BaseSettings):
     tesseract_finetune_lang: str | None = Field(
         default="histnews",
         validation_alias="HISTORICAL_OCR_TESSERACT_FINETUNE_LANG",
+        description=(
+            "English/Antiqua newspaper LSTM (start_model=eng). Applied only to "
+            "Latin-script roman bundles; skipped for Fraktur and Greek."
+        ),
     )
     tesseract_finetune_path: Path | None = Field(
         default=Path("models/histnews.traineddata"),
